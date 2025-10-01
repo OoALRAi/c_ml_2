@@ -46,7 +46,7 @@ Matrix *mse(Matrix *y, Matrix *y_hat);
 Matrix *grad_mse(Matrix *y, Matrix *y_hat);
 
 Matrix *forward(Dense *d, Matrix *input);
-Matrix *backward(Dense *d, Matrix *next_grad);
+Matrix *backward(Dense *d, Matrix *next_grad, float alpha);
 Matrix *loss_forward(Loss *loss, Matrix *y, Matrix *y_hat);
 Matrix *loss_backward(Loss *loss);
 

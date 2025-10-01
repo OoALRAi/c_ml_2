@@ -38,7 +38,6 @@ Matrix *grad_relu(Matrix *relu_input, Matrix *next_grad)
 
 Matrix *mse(Matrix *y, Matrix *y_hat)
 {
-
     Matrix *result = sub_mat(y, y_hat);
     elementwise_pow_mat_to(result, result, 2);
     div_mat_by_value_to(result, result, 2);
@@ -117,19 +116,33 @@ Matrix *forward(Dense *d, Matrix *input)
 {
     d->input = input;
     Matrix *linear = mul_mat(input, d->weights);
-    Matrix *z = add_mat(linear, d->bias);
-    d->z = z;
-    Matrix *output = d->activation(z);
+    add_mat_to(linear, d->bias, linear);
+    d->z = linear; // after adding bias to linear, linear becomes the z
+    Matrix *output = d->activation(linear);
     d->output = output;
-    return z;
+    return output;
 }
 
-Matrix *backward(Dense *d, Matrix *next_grad)
+Matrix *backward(Dense *d, Matrix *next_grad, float alpha)
 {
+    Matrix *dact = d->grad_activation(d->z, next_grad);
+    d->dz = dact;
+
+    Matrix *dydw = transpose_mat(d->input);
+    Matrix *dw = mul_mat(dydw, dact);
+    multiply_mat_with_value_to(dw, dw, alpha);
+    d->dw = dw;
+    sub_mat_to(d->weights, d->dw, d->weights);
+
+    Matrix *dydx = transpose_mat(d->weights);
+    Matrix *dx = mul_mat(next_grad, dydx);
+    return dx;
 }
 
 Matrix *loss_forward(Loss *loss, Matrix *y, Matrix *y_hat)
 {
+    loss->y = y;
+    loss->y_hat = y_hat;
     Matrix *error_values = loss->error_function(y, y_hat);
     loss->error_values = error_values;
     return error_values;

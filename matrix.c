@@ -32,6 +32,20 @@ void free_mat(Matrix *m)
     free(m);
     m = NULL;
 }
+
+Matrix *zeros(int rows, int cols)
+{
+    Matrix *r = new_mat(rows, cols);
+    const_fill_mat(0, r);
+    return r;
+}
+
+Matrix *ones(int rows, int cols)
+{
+    Matrix *r = new_mat(rows, cols);
+    const_fill_mat(1, r);
+    return r;
+}
 float get_element_at(Matrix *m, int x, int y)
 {
 
@@ -493,11 +507,13 @@ void print_mat(Matrix *m)
 {
     if (m == NULL)
     {
-        printf("matrix is null\n");
+        fprintf(stderr, "matrix is null\n");
+        exit(-1);
     }
     if (m->data == NULL)
     {
-        printf("data of the matrix is null\n");
+        fprintf(stderr, "data of the matrix is null\n");
+        exit(-1);
     }
 
     printf("(%d x %d)\n", m->rows, m->cols);

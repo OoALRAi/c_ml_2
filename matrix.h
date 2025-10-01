@@ -12,6 +12,9 @@ Matrix *new_mat(int rows, int cols);
 void free_mat(Matrix *m);
 void print_mat(Matrix *m);
 
+Matrix *zeros(int rows, int cols);
+Matrix *ones(int rows, int cols);
+
 float get_element_at(Matrix *m, int x, int y);
 void set_element_at(Matrix *m, int x, int y, float value);
 
