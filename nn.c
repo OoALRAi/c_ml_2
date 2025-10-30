@@ -2,38 +2,95 @@
 #include "matrix.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
-Matrix *relu(Matrix *input)
+void relu(Matrix *input, Matrix *result)
 {
     if (input == NULL)
     {
         fprintf(stderr, "input matrix is null\n");
         exit(-1);
     }
-    Matrix *r = new_mat(input->rows, input->cols);
     for (size_t y = 0; y < input->rows; y++)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
             float value = get_element_at(input, x, y);
             float act_value = value > 0 ? value : 0;
-            set_element_at(r, x, y, act_value);
+            set_element_at(result, x, y, act_value);
         }
     }
-    return r;
 }
 
-Matrix *grad_relu(Matrix *relu_input, Matrix *next_grad)
+void grad_relu(Matrix *relu_input, Matrix *next_grad, Matrix *result)
 {
     for (size_t y = 0; y < relu_input->rows; y++)
     {
         for (size_t x = 0; x < relu_input->cols; x++)
         {
             float value = get_element_at(relu_input, x, y);
-            set_element_at(next_grad, x, y, value > 0 ? get_element_at(next_grad, x, y) : 0);
+            set_element_at(result, x, y, value > 0 ? get_element_at(next_grad, x, y) : 0);
         }
     }
-    return next_grad;
+}
+
+float sigmoid_function(float value)
+{
+    return 1 / (1 + exp(-value));
+}
+
+void sigmoid(Matrix *input, Matrix *result)
+{
+    for (size_t y = 0; y < input->rows; y++)
+    {
+        for (size_t x = 0; x < input->cols; x++)
+        {
+            float value = get_element_at(input, x, y);
+            set_element_at(result, x, y, sigmoid_function(value));
+        }
+    }
+}
+
+void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
+{
+    for (size_t y = 0; y < sigmoid_input->rows; y++)
+    {
+        for (size_t x = 0; x < sigmoid_input->cols; x++)
+        {
+            float value = get_element_at(sigmoid_input, x, y);
+            float sig_value = sigmoid_function(value);
+            set_element_at(result, x, y, sig_value * (1 - sig_value));
+        }
+    }
+}
+
+void softmax(Matrix *input, Matrix *result)
+{
+    float sum_exp = 0;
+    for (size_t y = 0; y < input->rows; y++)
+    {
+        for (size_t x = 0; x < input->cols; x++)
+        {
+            sum_exp += exp(get_element_at(input, x, y));
+        }
+    }
+
+    for (size_t y = 0; y < input->rows; y++)
+    {
+        for (size_t x = 0; x < input->cols; x++)
+        {
+            set_element_at(result, x, y, exp(get_element_at(input, x, y)) / sum_exp);
+        }
+    }
+}
+
+void grad_softmax(Matrix *softmax_input, Matrix *ground_truth, Matrix *result)
+{
+    // the second argument to this function is the ground truth
+    // since the gradient of the softmax is computed under the assumption
+    // that softmax is use and the cross entropy loss as error function.
+    softmax(softmax_input, result);
+    sub_mat_to(result, ground_truth, result);
 }
 
 Matrix *mse(Matrix *y, Matrix *y_hat)
@@ -50,30 +107,53 @@ Matrix *grad_mse(Matrix *y, Matrix *y_hat)
     return sub;
 }
 
-Dense *create_dense(int in, int out, Matrix *(*activation)(Matrix *), Matrix *(grad_activation)(Matrix *, Matrix *))
+Matrix *cross_entropy_loss(Matrix *y, Matrix *y_hat)
+{
+    // use yi and xi for indexing because y here represents the ground truth.
+    // ground truth y is one hot encoded vector of the true label
+    // if true label is 2 then it should be represented as:
+    // [0,0,1,0]
+    float sum = 0;
+    for (int yi = 0; yi < y->rows; yi++)
+    {
+        for (int xi = 0; xi < y->cols; xi++)
+        {
+            // y_i * log (y_i_hat)
+            sum -= get_element_at(y, xi, yi) * log(get_element_at(y_hat, xi, yi));
+        }
+    }
+    Matrix *r = new_mat(1, 1);
+    set_element_at(r, 0, 0, sum);
+    return r;
+}
+
+Matrix *grad_cross_entropy_loss(Matrix *y, Matrix *y_hat)
+{
+    (void)y_hat;
+    return y;
+}
+
+Dense *create_dense(int in, int out, void (*activation)(Matrix *, Matrix *), void(grad_activation)(Matrix *, Matrix *, Matrix *))
 {
     if (in <= 0 || out <= 0 || activation == NULL && grad_activation == NULL)
     {
         fprintf(stderr, "invalid parameters, faild to create dense layer\n");
         exit(0);
     }
-    Dense *dense = malloc(sizeof(Dense));
+    Dense *dense = calloc(1, sizeof(Dense));
     dense->id = id_counter;
     id_counter++;
+    dense->in_dim = in;
+    dense->out_dim = out;
+
     dense->weights = new_mat(in, out);
     dense->bias = new_mat(1, out);
+    dense->z = new_mat(1, out);
+    dense->output = new_mat(1, out);
+    dense->dz = new_mat(1, out);
 
     random_fill_mat(dense->weights);
     random_fill_mat(dense->bias);
-
-    dense->in_dim = in;
-    dense->out_dim = out;
-    dense->z = NULL;
-    dense->output = NULL;
-
-    dense->dw = NULL;
-    dense->db = NULL;
-    dense->dz = NULL;
 
     dense->activation = activation;
     dense->grad_activation = grad_activation;
@@ -115,27 +195,35 @@ void print_dense(Dense *d)
 Matrix *forward(Dense *d, Matrix *input)
 {
     d->input = input;
-    Matrix *linear = mul_mat(input, d->weights);
-    add_mat_to(linear, d->bias, linear);
-    d->z = linear; // after adding bias to linear, linear becomes the z
-    Matrix *output = d->activation(linear);
-    d->output = output;
-    return output;
+    mul_mat_to(input, d->weights, d->z);
+    add_mat_to(d->z, d->bias, d->z);
+
+    d->activation(d->z, d->output);
+    return d->output;
 }
 
 Matrix *backward(Dense *d, Matrix *next_grad, float alpha)
 {
-    Matrix *dact = d->grad_activation(d->z, next_grad);
-    d->dz = dact;
+    d->grad_activation(d->z, next_grad, d->dz);
 
     Matrix *dydw = transpose_mat(d->input);
-    Matrix *dw = mul_mat(dydw, dact);
-    multiply_mat_with_value_to(dw, dw, alpha);
-    d->dw = dw;
+    if (d->dw == NULL)
+    {
+        Matrix *dw = mul_mat(dydw, d->dz);
+        multiply_mat_with_value_to(dw, dw, alpha);
+        d->dw = dw;
+    }
+    else
+    {
+        mul_mat_to(dydw, d->dz, d->dw);
+        multiply_mat_with_value_to(d->dw, d->dw, alpha);
+    }
+    free_mat(dydw);
     sub_mat_to(d->weights, d->dw, d->weights);
 
     Matrix *dydx = transpose_mat(d->weights);
     Matrix *dx = mul_mat(next_grad, dydx);
+    free_mat(dydx);
     return dx;
 }
 

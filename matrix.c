@@ -529,29 +529,29 @@ void print_mat(Matrix *m)
     printf("]\n");
 }
 
-void copy_mat(Matrix *from, Matrix *to)
+void copy_mat(Matrix *source, Matrix *target)
 {
-    if (from == NULL)
+    if (source == NULL)
     {
         fprintf(stderr, "source matrix is null\n");
         exit(-1);
     }
-    if (to == NULL)
+    if (target == NULL)
     {
         fprintf(stderr, "target matrix is null\n");
         exit(-1);
     }
-    if (from->rows != to->rows || from->cols != to->cols)
+    if (source->rows != target->rows || source->cols != target->cols)
     {
         fprintf(stderr, "dimensions of source and target matrices do not match\n");
         exit(-1);
     }
-    for (size_t y = 0; y < from->rows; y++)
+    for (size_t y = 0; y < source->rows; y++)
     {
 
-        for (size_t x = 0; x < from->cols; x++)
+        for (size_t x = 0; x < source->cols; x++)
         {
-            set_element_at(to, x, y, get_element_at(from, x, y));
+            set_element_at(target, x, y, get_element_at(source, x, y));
         }
     }
 }

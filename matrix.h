@@ -46,7 +46,7 @@ Matrix *elementwise_pow_mat(Matrix *m, float pow_value);
 Matrix *transpose_mat(Matrix *m);
 
 // help functions to fill matrix
-void copy_mat(Matrix *from, Matrix *to);
+void copy_mat(Matrix *source, Matrix *target);
 void const_fill_mat(float value, Matrix *m);
 void stepwise_fill_mat(float start, float step, Matrix *m);
 Matrix *random_mat(int rows, int cols);
