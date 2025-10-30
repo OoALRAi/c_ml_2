@@ -10,7 +10,7 @@
 
 * derivative of softmax in combination with cross entropy loss (done)
 * test network 
-* solve bug causes the one hoted label to have more than one 1 in it
+
 
 
 ### Very important Observation:
