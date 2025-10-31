@@ -38,9 +38,10 @@ char *read_next_line(FILE *fp)
 
 void one_hot_label(int label, Matrix *result)
 {
-    printf("label: %d\n", label);
-    fflush(stdout);
-    set_element_at(result, 0, label, 1);
+    for (int i = 0; i < result->rows; i++)
+    {
+        set_element_at(result, 0, i, i == label);
+    }
 }
 
 void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
