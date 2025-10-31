@@ -38,10 +38,22 @@ char *read_next_line(FILE *fp)
 
 void one_hot_label(int label, Matrix *result)
 {
-    for (int i = 0; i < result->rows; i++)
+    for (int i = 0; i < result->cols; i++)
     {
-        set_element_at(result, 0, i, i == label);
+        set_element_at(result, i, 0, i == label);
     }
+}
+int label_from_one_hot(Matrix *one_hot_label)
+{
+    int label = -1;
+    for (int i = 0; i < one_hot_label->cols; i++)
+    {
+        if (get_element_at(one_hot_label, i, 0) == 1)
+        {
+            label = i;
+        }
+    }
+    return label;
 }
 
 void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
@@ -63,12 +75,14 @@ void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
     }
 
     char *current_char = line_data;
-    float label_value = atof(current_char);
+    double label_value = atof(current_char);
     one_hot_label(label_value, label);
     current_char = skip_value(current_char);
     for (int i = 0; i < 28 * 28; i++)
     {
-        float value = atof(current_char);
+        double value = atof(current_char);
+        value /= 255;
+
         set_element_at(data, i, 0, value);
         current_char = skip_value(current_char);
         if (current_char == NULL)
@@ -79,7 +93,7 @@ void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
 Mnist_Datapoint *create_datapoint()
 {
     Mnist_Datapoint *dp = malloc(sizeof(Mnist_Datapoint));
-    dp->label = new_mat(10, 1); // one-hot
+    dp->label = new_mat(1, 10); // one-hot
     dp->data = new_mat(1, 28 * 28);
     return dp;
 }
@@ -94,11 +108,13 @@ Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
     if (dataset->file == NULL)
     {
         dataset->file = fopen(dataset->path, "r");
+        read_next_line(dataset->file); // skip legend
     }
-    read_next_line(dataset->file); // skip legend
     char *line_data = read_next_line(dataset->file);
     if (line_data == NULL)
     {
+        fclose(dataset->file);
+        dataset->file = NULL;
         return NULL;
     }
     if (dataset->current_datapoint == NULL)

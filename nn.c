@@ -15,8 +15,8 @@ void relu(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            float value = get_element_at(input, x, y);
-            float act_value = value > 0 ? value : 0;
+            double value = get_element_at(input, x, y);
+            double act_value = value > 0 ? value : 0;
             set_element_at(result, x, y, act_value);
         }
     }
@@ -28,13 +28,13 @@ void grad_relu(Matrix *relu_input, Matrix *next_grad, Matrix *result)
     {
         for (size_t x = 0; x < relu_input->cols; x++)
         {
-            float value = get_element_at(relu_input, x, y);
+            double value = get_element_at(relu_input, x, y);
             set_element_at(result, x, y, value > 0 ? get_element_at(next_grad, x, y) : 0);
         }
     }
 }
 
-float sigmoid_function(float value)
+double sigmoid_function(double value)
 {
     return 1 / (1 + exp(-value));
 }
@@ -45,7 +45,7 @@ void sigmoid(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            float value = get_element_at(input, x, y);
+            double value = get_element_at(input, x, y);
             set_element_at(result, x, y, sigmoid_function(value));
         }
     }
@@ -57,8 +57,8 @@ void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
     {
         for (size_t x = 0; x < sigmoid_input->cols; x++)
         {
-            float value = get_element_at(sigmoid_input, x, y);
-            float sig_value = sigmoid_function(value);
+            double value = get_element_at(sigmoid_input, x, y);
+            double sig_value = sigmoid_function(value);
             set_element_at(result, x, y, sig_value * (1 - sig_value));
         }
     }
@@ -66,12 +66,15 @@ void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
 
 void softmax(Matrix *input, Matrix *result)
 {
-    float sum_exp = 0;
+    double max_value = max(input);
+    double sum_exp = 0;
     for (size_t y = 0; y < input->rows; y++)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            sum_exp += exp(get_element_at(input, x, y));
+            double value = get_element_at(input, x, y) - max_value;
+            double exp_value = exp(value);
+            sum_exp += exp_value;
         }
     }
 
@@ -79,7 +82,9 @@ void softmax(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            set_element_at(result, x, y, exp(get_element_at(input, x, y)) / sum_exp);
+            double value = get_element_at(input, x, y) - max_value;
+            double exp_value = exp(value);
+            set_element_at(result, x, y, exp_value / sum_exp);
         }
     }
 }
@@ -91,6 +96,17 @@ void grad_softmax(Matrix *softmax_input, Matrix *ground_truth, Matrix *result)
     // that softmax is use and the cross entropy loss as error function.
     softmax(softmax_input, result);
     sub_mat_to(result, ground_truth, result);
+}
+
+void identity_func(Matrix *input, Matrix *result)
+{
+    copy_mat(input, result);
+    printf("###\n%f\n###\n", exp(20));
+}
+void grad_identity_func(Matrix *input, Matrix *next_grad, Matrix *result)
+{
+    (void)input;
+    copy_mat(next_grad, result);
 }
 
 Matrix *mse(Matrix *y, Matrix *y_hat)
@@ -113,7 +129,7 @@ Matrix *cross_entropy_loss(Matrix *y, Matrix *y_hat)
     // ground truth y is one hot encoded vector of the true label
     // if true label is 2 then it should be represented as:
     // [0,0,1,0]
-    float sum = 0;
+    double sum = 0;
     for (int yi = 0; yi < y->rows; yi++)
     {
         for (int xi = 0; xi < y->cols; xi++)
@@ -199,10 +215,11 @@ Matrix *forward(Dense *d, Matrix *input)
     add_mat_to(d->z, d->bias, d->z);
 
     d->activation(d->z, d->output);
+
     return d->output;
 }
 
-Matrix *backward(Dense *d, Matrix *next_grad, float alpha)
+Matrix *backward(Dense *d, Matrix *next_grad, double alpha)
 {
     d->grad_activation(d->z, next_grad, d->dz);
 

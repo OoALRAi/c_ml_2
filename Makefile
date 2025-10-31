@@ -1,12 +1,12 @@
 CC=clang
 FLAGS=-Wall
 
-all: test.o matrix.o nn.o
-	$(CC) $(FLAGS) test.o matrix.o nn.o -o test -lm
+all: main.o matrix.o nn.o mnist.o
+	$(CC) $(FLAGS) nn.o mnist.o matrix.o  main.o -o main -lm
 
 
-main2: mnist.o main2.o matrix.o
-	$(CC) $(FLAGS) matrix.o mnist.o main2.o -o main2 -lm
+main2: mnist.o main2.o matrix.o nn.o
+	$(CC) $(FLAGS) matrix.o nn.o mnist.o main2.o -o main2 -lm
 
 
 

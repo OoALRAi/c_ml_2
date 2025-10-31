@@ -18,6 +18,8 @@ typedef struct Mnist_Dataset
 
 } Mnist_Dataset;
 
+void one_hot_label(int label, Matrix *result);
+int label_from_one_hot(Matrix *one_hot_label);
 Mnist_Datapoint *create_datapoint();
 Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset);
 Mnist_Dataset *create_mnist_from_csv(char *path);

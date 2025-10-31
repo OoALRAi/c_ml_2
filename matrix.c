@@ -9,7 +9,7 @@ Matrix *new_mat(int rows, int cols)
     Matrix *m = malloc(sizeof(Matrix));
     m->rows = rows;
     m->cols = cols;
-    m->data = calloc(rows * cols, sizeof(float));
+    m->data = calloc(rows * cols, sizeof(double));
     if (!m->data)
     {
         free(m->data);
@@ -46,7 +46,7 @@ Matrix *ones(int rows, int cols)
     const_fill_mat(1, r);
     return r;
 }
-float get_element_at(Matrix *m, int x, int y)
+double get_element_at(Matrix *m, int x, int y)
 {
 
     if (m == NULL)
@@ -61,7 +61,7 @@ float get_element_at(Matrix *m, int x, int y)
     }
     return m->data[y * m->cols + x];
 }
-void set_element_at(Matrix *m, int x, int y, float value)
+void set_element_at(Matrix *m, int x, int y, double value)
 {
 
     if (m == NULL)
@@ -192,7 +192,7 @@ void mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
     {
         for (int x = 0; x < b->cols; x++)
         {
-            float acc = 0;
+            double acc = 0;
             for (int i = 0; i < a->cols; i++)
             {
                 acc += get_element_at(a, i, y) * get_element_at(b, x, i);
@@ -304,7 +304,7 @@ void transpose_mat_to(Matrix *m, Matrix *result)
     }
 }
 
-void elementwise_pow_mat_to(Matrix *m, Matrix *result, float pow_value)
+void elementwise_pow_mat_to(Matrix *m, Matrix *result, double pow_value)
 {
     if (m == NULL)
     {
@@ -326,7 +326,7 @@ void elementwise_pow_mat_to(Matrix *m, Matrix *result, float pow_value)
     {
         for (size_t x = 0; x < m->cols; x++)
         {
-            float value = get_element_at(m, x, y);
+            double value = get_element_at(m, x, y);
             set_element_at(
                 result, x, y,
                 pow(value, pow_value));
@@ -351,7 +351,7 @@ void transpose_mat_inplace(Matrix *m)
     {
         for (int x = x_start; x < m->cols; x++)
         {
-            float temp = m->data[y * m->cols + x];
+            double temp = m->data[y * m->cols + x];
             m->data[y * m->cols + x] = m->data[x * m->cols + y];
             m->data[x * m->cols + y] = temp;
         }
@@ -362,7 +362,7 @@ void transpose_mat_inplace(Matrix *m)
     m->rows = temp_cols;
 }
 
-void scale_mat_inplace(Matrix *m, float scaler)
+void scale_mat_inplace(Matrix *m, double scaler)
 {
     if (m == NULL)
     {
@@ -407,7 +407,7 @@ Matrix *elementwise_div_mat(Matrix *a, Matrix *b)
     return r;
 }
 
-void div_mat_by_value_to(Matrix *m, Matrix *result, float value)
+void div_mat_by_value_to(Matrix *m, Matrix *result, double value)
 {
     if (m == NULL)
     {
@@ -436,7 +436,7 @@ void div_mat_by_value_to(Matrix *m, Matrix *result, float value)
     }
 }
 
-Matrix *div_mat_by_value(Matrix *m, float value)
+Matrix *div_mat_by_value(Matrix *m, double value)
 {
     if (m == NULL)
     {
@@ -447,7 +447,7 @@ Matrix *div_mat_by_value(Matrix *m, float value)
     div_mat_by_value_to(m, result, value);
     return result;
 }
-void multiply_mat_with_value_to(Matrix *m, Matrix *result, float value)
+void multiply_mat_with_value_to(Matrix *m, Matrix *result, double value)
 {
     if (m == NULL)
     {
@@ -484,7 +484,7 @@ Matrix *elementwise_mul_mat(Matrix *a, Matrix *b)
     return r;
 }
 
-Matrix *elementwise_pow_mat(Matrix *m, float pow_value)
+Matrix *elementwise_pow_mat(Matrix *m, double pow_value)
 {
     if (m == NULL)
     {
@@ -501,6 +501,45 @@ Matrix *transpose_mat(Matrix *m)
     Matrix *r = new_mat(m->cols, m->rows);
     transpose_mat_to(m, r);
     return r;
+}
+
+double max(Matrix *m)
+{
+    if (m == NULL)
+    {
+        fprintf(stderr, "matrix is null\n");
+        exit(0);
+    }
+    double max = -INFINITY;
+    for (int y = 0; y < m->rows; y++)
+    {
+        for (int x = 0; x < m->cols; x++)
+        {
+            double v = get_element_at(m, x, y);
+            max = v > max ? v : max;
+        }
+    }
+    return max;
+}
+int max_arg(Matrix *m)
+{
+    if (m == NULL)
+    {
+        fprintf(stderr, "matrix is null\n");
+        exit(0);
+    }
+    double max = -INFINITY;
+    int arg = -1;
+    for (int x = 0; x < m->cols; x++)
+    {
+        double v = get_element_at(m, x, 0);
+        if (v > max)
+        {
+            max = v;
+            arg = x;
+        }
+    }
+    return arg;
 }
 
 void print_mat(Matrix *m)
@@ -556,7 +595,7 @@ void copy_mat(Matrix *source, Matrix *target)
     }
 }
 
-void const_fill_mat(float value, Matrix *m)
+void const_fill_mat(double value, Matrix *m)
 {
     if (m == NULL)
     {
@@ -578,7 +617,7 @@ void const_fill_mat(float value, Matrix *m)
     }
 }
 
-void stepwise_fill_mat(float start, float step, Matrix *m)
+void stepwise_fill_mat(double start, double step, Matrix *m)
 {
     if (m == NULL)
     {
@@ -601,7 +640,7 @@ void stepwise_fill_mat(float start, float step, Matrix *m)
     }
 }
 
-float get_random_number()
+double get_random_number()
 {
     static int SEED_INITIALIZED = 0;
     if (SEED_INITIALIZED == 0)
@@ -609,7 +648,7 @@ float get_random_number()
         srand(time(NULL));
         SEED_INITIALIZED = 1;
     }
-    float value = ((float)rand()) / RAND_MAX;
+    double value = ((double)rand()) / RAND_MAX;
     return value;
 }
 void random_fill_mat(Matrix *m)
