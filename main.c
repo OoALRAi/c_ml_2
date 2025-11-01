@@ -3,6 +3,38 @@
 #include "matrix.h"
 #include "nn.h"
 #include "mnist.h"
+Matrix *forward_pass(Dense *network[], int num_layers, Mnist_Datapoint *dp)
+{
+    Matrix *layer_output = dp->data;
+    for (size_t layer_index = 0; layer_index < num_layers; layer_index++)
+    {
+        Dense *d = network[layer_index];
+        layer_output = forward(d, layer_output);
+    }
+    return layer_output;
+}
+
+void backward_pass(Dense *network[], int num_layers, Loss *loss, double lr)
+{
+    Matrix *loss_grad = loss_backward(loss);
+
+    Matrix *next_grad = loss_grad;
+    for (int layer_index = num_layers - 1; layer_index >= 0; layer_index--)
+    {
+        Dense *d = network[layer_index];
+        next_grad = backward(d, next_grad, lr);
+    }
+}
+
+int train(Dense *network[], int num_layers, Loss *loss, Mnist_Datapoint *dp, double lr)
+{
+    Matrix *pred = forward_pass(network, num_layers, dp);
+    int pred_value = argmax(pred);
+    int gt_value = argmax(dp->label);
+    Matrix *loss_value = loss_forward(loss, dp->label, pred);
+    backward_pass(network, num_layers, loss, lr);
+    return (pred_value == gt_value);
+}
 
 int main(void)
 {
@@ -29,29 +61,9 @@ int main(void)
             Mnist_Datapoint *datapoint = mnist_next_datapoint(dataset);
             if (datapoint == NULL)
                 break;
-            Matrix *input = datapoint->data;
-            Matrix *output = datapoint->label;
 
-            Matrix *layer_output = input;
-            for (size_t layer_index = 0; layer_index < num_layers; layer_index++)
-            {
-                Dense *d = network[layer_index];
-                layer_output = forward(d, layer_output);
-            }
-            int gt = argmax(output);
-            int pred = argmax(layer_output);
-            if (gt == pred)
-                correct_predictions++;
-
-            Matrix *loss_value = loss_forward(loss, output, layer_output);
-            Matrix *loss_grad = loss_backward(loss);
-
-            Matrix *next_grad = loss_grad;
-            for (int layer_index = num_layers - 1; layer_index >= 0; layer_index--)
-            {
-                Dense *d = network[layer_index];
-                next_grad = backward(d, next_grad, learning_rate);
-            }
+            int is_correct = train(network, num_layers, loss, datapoint, learning_rate);
+            correct_predictions += is_correct;
         }
         printf("correct predictions: %d\n", correct_predictions);
         correct_predictions = 0;
