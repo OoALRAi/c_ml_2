@@ -219,27 +219,42 @@ Matrix *forward(Dense *d, Matrix *input)
     return d->output;
 }
 
-Matrix *backward(Dense *d, Matrix *next_grad, double alpha)
+Matrix *backward(Dense *d, Matrix *next_grad, double lr)
 {
     d->grad_activation(d->z, next_grad, d->dz);
 
+    // y = xw+b
     Matrix *dydw = transpose_mat(d->input);
     if (d->dw == NULL)
     {
         Matrix *dw = mul_mat(dydw, d->dz);
-        multiply_mat_with_value_to(dw, dw, alpha);
+        multiply_mat_with_value_to(dw, dw, lr);
         d->dw = dw;
     }
     else
     {
         mul_mat_to(dydw, d->dz, d->dw);
-        multiply_mat_with_value_to(d->dw, d->dw, alpha);
+        multiply_mat_with_value_to(d->dw, d->dw, lr);
     }
     free_mat(dydw);
     sub_mat_to(d->weights, d->dw, d->weights);
 
+    if (d->db == NULL)
+    {
+        d->db = new_mat(d->bias->rows, d->bias->cols);
+        copy_mat(d->dz, d->db);
+        multiply_mat_with_value_to(d->db, d->db, lr);
+        sub_mat_to(d->bias, d->db, d->bias);
+    }
+    else
+    {
+        copy_mat(d->dz, d->db);
+        multiply_mat_with_value_to(d->db, d->db, lr);
+        sub_mat_to(d->bias, d->db, d->bias);
+    }
+
     Matrix *dydx = transpose_mat(d->weights);
-    Matrix *dx = mul_mat(next_grad, dydx);
+    Matrix *dx = mul_mat(d->dz, dydx);
     free_mat(dydx);
     return dx;
 }

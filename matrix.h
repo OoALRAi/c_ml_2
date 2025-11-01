@@ -45,7 +45,7 @@ Matrix *elementwise_mul_mat(Matrix *a, Matrix *b);
 Matrix *elementwise_pow_mat(Matrix *m, double pow_value);
 Matrix *transpose_mat(Matrix *m);
 double max(Matrix *m);
-int max_arg(Matrix *m);
+int argmax(Matrix *m);
 
 // help functions to fill matrix
 void copy_mat(Matrix *source, Matrix *target);

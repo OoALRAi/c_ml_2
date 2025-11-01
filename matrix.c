@@ -521,7 +521,7 @@ double max(Matrix *m)
     }
     return max;
 }
-int max_arg(Matrix *m)
+int argmax(Matrix *m)
 {
     if (m == NULL)
     {
@@ -648,7 +648,7 @@ double get_random_number()
         srand(time(NULL));
         SEED_INITIALIZED = 1;
     }
-    double value = ((double)rand()) / RAND_MAX;
+    double value = (((double)rand()) / RAND_MAX) * 2 - 1;
     return value;
 }
 void random_fill_mat(Matrix *m)
