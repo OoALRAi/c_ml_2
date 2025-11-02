@@ -7,6 +7,8 @@ all: main.o matrix.o nn.o mnist.o
 test_mem_leak: test_mem_leak.o nn.o matrix.o mnist.o
 	$(CC) $(FLAGS) test_mem_leak.o nn.o matrix.o mnist.o -o test_mem_leak -lm
 
+test_tanh: test_tanh.o nn.o matrix.o
+	$(CC) $(FLAGS) test_tanh.o nn.o matrix.o -o test_tanh -lm
 
 clean:
 	rm *.o main main2 main_str test_mem_leak

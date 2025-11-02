@@ -47,7 +47,7 @@ int main(void)
     double learning_rate = 0.0001;
 
     Dense *network[] = {
-        create_dense(in_dim, out_dim_1, relu, grad_relu),
+        create_dense(in_dim, out_dim_1, tanh_act, grad_tanh),
         create_dense(out_dim_1, out_dim_2, relu, grad_relu),
         create_dense(out_dim_2, out_dim, softmax, grad_softmax)};
     Loss *loss = create_loss(cross_entropy_loss, grad_cross_entropy_loss);

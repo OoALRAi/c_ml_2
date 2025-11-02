@@ -49,6 +49,10 @@ double sigmoid_function(double value);
 void sigmoid(Matrix *input, Matrix *result);
 void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result);
 
+double tanh_func(double value);
+void tanh_act(Matrix *input, Matrix *result);
+void grad_tanh(Matrix *tanh_input, Matrix *next_grad, Matrix *result);
+
 void softmax(Matrix *input, Matrix *result);
 void grad_softmax(Matrix *softmax_input, Matrix *ground_truth, Matrix *result);
 

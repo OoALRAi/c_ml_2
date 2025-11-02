@@ -62,6 +62,38 @@ void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
             set_element_at(result, x, y, sig_value * (1 - sig_value));
         }
     }
+    elementwise_mul_mat_to(next_grad, result, result);
+}
+
+double tanh_func(double value)
+{
+    return tanh(value);
+}
+
+void tanh_act(Matrix *input, Matrix *result)
+{
+    for (size_t y = 0; y < input->rows; y++)
+    {
+        for (size_t x = 0; x < input->cols; x++)
+        {
+            double value = get_element_at(input, x, y);
+            set_element_at(result, x, y, tanh_func(value));
+        }
+    }
+}
+
+void grad_tanh(Matrix *tanh_input, Matrix *next_grad, Matrix *result)
+{
+    for (size_t y = 0; y < tanh_input->rows; y++)
+    {
+        for (size_t x = 0; x < tanh_input->cols; x++)
+        {
+            double value = get_element_at(tanh_input, x, y);
+            value = 1 - powf(tanh_func(value), 2.0);
+            value *= get_element_at(next_grad, x, y);
+            set_element_at(result, x, y, value);
+        }
+    }
 }
 
 void softmax(Matrix *input, Matrix *result)
