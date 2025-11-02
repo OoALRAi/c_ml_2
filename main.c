@@ -16,13 +16,14 @@ Matrix *forward_pass(Dense *network[], int num_layers, Mnist_Datapoint *dp)
 
 void backward_pass(Dense *network[], int num_layers, Loss *loss, double lr)
 {
-    Matrix *loss_grad = loss_backward(loss);
+    loss_backward(loss);
 
-    Matrix *next_grad = loss_grad;
+    Matrix *next_grad = loss->grad_error_values;
     for (int layer_index = num_layers - 1; layer_index >= 0; layer_index--)
     {
         Dense *d = network[layer_index];
-        next_grad = backward(d, next_grad, lr);
+        backward(d, next_grad, lr);
+        next_grad = d->dx;
     }
 }
 
@@ -31,7 +32,7 @@ int train(Dense *network[], int num_layers, Loss *loss, Mnist_Datapoint *dp, dou
     Matrix *pred = forward_pass(network, num_layers, dp);
     int pred_value = argmax(pred);
     int gt_value = argmax(dp->label);
-    Matrix *loss_value = loss_forward(loss, dp->label, pred);
+    loss_forward(loss, dp->label, pred);
     backward_pass(network, num_layers, loss, lr);
     return (pred_value == gt_value);
 }
@@ -39,8 +40,8 @@ int train(Dense *network[], int num_layers, Loss *loss, Mnist_Datapoint *dp, dou
 int main(void)
 {
     int in_dim = 28 * 28;
-    int out_dim_1 = 50;
-    int out_dim_2 = 20;
+    int out_dim_1 = 128;
+    int out_dim_2 = 32;
     int out_dim = 10;
     int num_layers = 3;
     double learning_rate = 0.0001;
@@ -54,7 +55,7 @@ int main(void)
     Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv");
     int correct_predictions = 0;
 
-    for (size_t epoch = 0; epoch < 10; epoch++)
+    for (size_t epoch = 0; epoch < 30; epoch++)
     {
         while (1)
         {
@@ -65,9 +66,18 @@ int main(void)
             int is_correct = train(network, num_layers, loss, datapoint, learning_rate);
             correct_predictions += is_correct;
         }
-        printf("correct predictions: %d\n", correct_predictions);
+        printf("correct predictions: %d\t\n", correct_predictions);
+        printf("loss: \t\t%f\n", loss->error_values->data[0]);
         correct_predictions = 0;
     }
+    for (int i = 0; i < num_layers; i++)
+    {
+        Dense *d = network[i];
+        free_dense(d);
+    }
+
+    free_loss(loss);
+    free_dataset(dataset);
 
     return 0;
 }

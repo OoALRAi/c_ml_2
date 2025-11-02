@@ -19,6 +19,23 @@ Matrix *new_mat(int rows, int cols)
     return m;
 }
 
+Matrix *new_mat_like(Matrix *m)
+{
+    if (!m)
+    {
+        fprintf(stderr, "[new_mat_like]: m is null\n");
+        exit(0);
+    }
+    return new_mat(m->rows, m->cols);
+}
+
+Matrix *new_copy_of(Matrix *m)
+{
+    Matrix *cp_mat = new_mat_like(m);
+    copy_mat(m, cp_mat);
+    return cp_mat;
+}
+
 void free_mat(Matrix *m)
 {
     if (m == NULL)

@@ -146,7 +146,8 @@ Matrix *cross_entropy_loss(Matrix *y, Matrix *y_hat)
 Matrix *grad_cross_entropy_loss(Matrix *y, Matrix *y_hat)
 {
     (void)y_hat;
-    return y;
+    Matrix *y_cp = new_copy_of(y);
+    return y_cp;
 }
 
 Dense *create_dense(int in, int out, void (*activation)(Matrix *, Matrix *), void(grad_activation)(Matrix *, Matrix *, Matrix *))
@@ -162,10 +163,11 @@ Dense *create_dense(int in, int out, void (*activation)(Matrix *, Matrix *), voi
     dense->in_dim = in;
     dense->out_dim = out;
 
+    dense->input = new_mat(1, in);
     dense->weights = new_mat(in, out);
     dense->bias = new_mat(1, out);
-    dense->z = new_mat(1, out);
-    dense->output = new_mat(1, out);
+    dense->out_pred_act = new_mat(1, out);
+    dense->out_post_act = new_mat(1, out);
     dense->dz = new_mat(1, out);
 
     random_fill_mat(dense->weights);
@@ -174,6 +176,46 @@ Dense *create_dense(int in, int out, void (*activation)(Matrix *, Matrix *), voi
     dense->activation = activation;
     dense->grad_activation = grad_activation;
     return dense;
+}
+void free_dense(Dense *d)
+{
+    if (d->input)
+    {
+        free_mat(d->input);
+    }
+    if (d->weights)
+    {
+        free_mat(d->weights);
+    }
+    if (d->bias)
+    {
+        free_mat(d->bias);
+    }
+    if (d->out_pred_act)
+    {
+        free_mat(d->out_pred_act);
+    }
+    if (d->out_post_act)
+    {
+        free_mat(d->out_post_act);
+    }
+    if (d->dw)
+    {
+        free_mat(d->dw);
+    }
+    if (d->db)
+    {
+        free_mat(d->db);
+    }
+    if (d->dz)
+    {
+        free_mat(d->dz);
+    }
+    if (d->dx)
+    {
+        free_mat(d->dx);
+    }
+    free(d);
 }
 
 Loss *create_loss(Matrix *(*error_function)(Matrix *, Matrix *), Matrix *(*grad_error_function)(Matrix *, Matrix *))
@@ -187,10 +229,32 @@ Loss *create_loss(Matrix *(*error_function)(Matrix *, Matrix *), Matrix *(*grad_
     return loss;
 }
 
+void free_loss(Loss *l)
+{
+    if (l->error_values)
+    {
+        free_mat(l->error_values);
+    }
+    if (l->grad_error_values)
+    {
+        print_mat(l->grad_error_values);
+        free_mat(l->grad_error_values);
+    }
+    if (l->y != NULL)
+    {
+        free_mat(l->y);
+    }
+    if (l->y_hat)
+    {
+        free_mat(l->y_hat);
+    }
+    free(l);
+}
+
 void print_dense(Dense *d)
 {
     printf("dense layer: %d\n", d->id);
-    printf("input dim: %d, output dim: %d\n", d->in_dim, d->out_dim);
+    printf("input dim: %d, out_post_act dim: %d\n", d->in_dim, d->out_dim);
     if (d->input != NULL)
     {
         printf("input tensor dim: (%dx%d)\n", d->input->rows, d->input->cols);
@@ -198,30 +262,28 @@ void print_dense(Dense *d)
 
     printf("bias dim: (%dx%d)\n", d->bias->rows, d->bias->cols);
 
-    if (d->z != NULL)
+    if (d->out_pred_act != NULL)
     {
-        printf("z tensor dim: (%dx%d)\n", d->z->rows, d->z->cols);
+        printf("out_pred_act tensor dim: (%dx%d)\n", d->out_pred_act->rows, d->out_pred_act->cols);
     }
-    if (d->output != NULL)
+    if (d->out_post_act != NULL)
     {
-        printf("output tensor dim: (%dx%d)\n", d->output->rows, d->output->cols);
+        printf("out_post_act tensor dim: (%dx%d)\n", d->out_post_act->rows, d->out_post_act->cols);
     }
 }
 
 Matrix *forward(Dense *d, Matrix *input)
 {
-    d->input = input;
-    mul_mat_to(input, d->weights, d->z);
-    add_mat_to(d->z, d->bias, d->z);
-
-    d->activation(d->z, d->output);
-
-    return d->output;
+    copy_mat(input, d->input);
+    mul_mat_to(input, d->weights, d->out_pred_act);
+    add_mat_to(d->out_pred_act, d->bias, d->out_pred_act);
+    d->activation(d->out_pred_act, d->out_post_act);
+    return d->out_post_act;
 }
 
-Matrix *backward(Dense *d, Matrix *next_grad, double lr)
+void backward(Dense *d, Matrix *next_grad, double lr)
 {
-    d->grad_activation(d->z, next_grad, d->dz);
+    d->grad_activation(d->out_pred_act, next_grad, d->dz);
 
     // y = xw+b
     Matrix *dydw = transpose_mat(d->input);
@@ -255,21 +317,53 @@ Matrix *backward(Dense *d, Matrix *next_grad, double lr)
 
     Matrix *dydx = transpose_mat(d->weights);
     Matrix *dx = mul_mat(d->dz, dydx);
+    if (d->dx == NULL)
+    {
+        d->dx = dx;
+    }
+    else
+    {
+        copy_mat(dx, d->dx);
+        free_mat(dx);
+    }
+
     free_mat(dydx);
-    return dx;
 }
 
-Matrix *loss_forward(Loss *loss, Matrix *y, Matrix *y_hat)
+void loss_forward(Loss *loss, Matrix *y, Matrix *y_hat)
 {
-    loss->y = y;
-    loss->y_hat = y_hat;
+    if (loss->y == NULL)
+    {
+        loss->y = new_mat_like(y);
+    }
+    copy_mat(y, loss->y);
+    if (!loss->y_hat)
+    {
+        loss->y_hat = new_mat_like(y_hat);
+    }
+    copy_mat(y_hat, loss->y_hat);
     Matrix *error_values = loss->error_function(y, y_hat);
-    loss->error_values = error_values;
-    return error_values;
+    if (loss->error_values)
+    {
+        copy_mat(error_values, loss->error_values);
+        free_mat(error_values);
+    }
+    else
+    {
+        loss->error_values = error_values;
+    }
 }
-Matrix *loss_backward(Loss *loss)
+
+void loss_backward(Loss *loss)
 {
     Matrix *grad_error_values = loss->grad_error_function(loss->y, loss->y_hat);
-    loss->grad_error_values = grad_error_values;
-    return grad_error_values;
+    if (loss->grad_error_values == NULL)
+    {
+        loss->grad_error_values = grad_error_values;
+    }
+    else
+    {
+        copy_mat(grad_error_values, loss->grad_error_values);
+        free_mat(grad_error_values);
+    }
 }

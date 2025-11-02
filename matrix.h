@@ -9,6 +9,8 @@ typedef struct Matrix
 } Matrix;
 
 Matrix *new_mat(int rows, int cols);
+Matrix *new_mat_like(Matrix *m);
+Matrix *new_copy_of(Matrix *m);
 void free_mat(Matrix *m);
 void print_mat(Matrix *m);
 

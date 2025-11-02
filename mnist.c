@@ -31,6 +31,7 @@ char *read_next_line(FILE *fp)
     read = getline(&line, &len, fp);
     if (read == -1)
     {
+        free(line);
         return NULL;
     }
     return line;
@@ -98,6 +99,11 @@ Mnist_Datapoint *create_datapoint()
     return dp;
 }
 
+/**
+ * returns next datapoint in mnist dataset
+ * if the dataset has no more datapoints it resets and returns NULL
+ * the next time calling this function will return the first datapoint again.
+ */
 Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
 {
     if (dataset == NULL)
@@ -108,7 +114,8 @@ Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
     if (dataset->file == NULL)
     {
         dataset->file = fopen(dataset->path, "r");
-        read_next_line(dataset->file); // skip legend
+        char *next_line = read_next_line(dataset->file); // skip legend
+        free(next_line);
     }
     char *line_data = read_next_line(dataset->file);
     if (line_data == NULL)
@@ -122,6 +129,7 @@ Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
         dataset->current_datapoint = create_datapoint();
     }
     parse_line_to_mat(line_data, dataset->current_datapoint->data, dataset->current_datapoint->label);
+    free(line_data);
 
     return dataset->current_datapoint;
 }
@@ -138,10 +146,19 @@ Mnist_Dataset *create_mnist_from_csv(char *path)
 void free_dataset(Mnist_Dataset *dataset)
 {
     fclose(dataset->file);
+    if (dataset->current_datapoint)
+    {
+        free_dataopint(dataset->current_datapoint);
+    }
+    free(dataset);
     // TODO: free other resources
 }
 
 void free_dataopint(Mnist_Datapoint *dp)
 {
+
+    free_mat(dp->data);
+    free_mat(dp->label);
+    free(dp);
     // TODO: free datapoint
 }

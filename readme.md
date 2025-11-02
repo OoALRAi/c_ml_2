@@ -13,6 +13,8 @@
 -----------
 
 * compute statistics to present in github page.
+* add more activation functions
+* free memory to prevent memory leaks in forward and backward.
 
 ### Very important Observation:
 * deeper netowrk needs smaller learning rate in order to converge correctly!
