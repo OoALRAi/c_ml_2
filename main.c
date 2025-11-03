@@ -47,13 +47,14 @@ int main(void)
     double learning_rate = 0.0001;
 
     Dense *network[] = {
-        create_dense(in_dim, out_dim_1, tanh_act, grad_tanh),
-        create_dense(out_dim_1, out_dim_2, relu, grad_relu),
+        create_dense(in_dim, out_dim_1, leaky_relu, grad_leaky_relu),
+        create_dense(out_dim_1, out_dim_2, tanh_act, grad_tanh),
         create_dense(out_dim_2, out_dim, softmax, grad_softmax)};
     Loss *loss = create_loss(cross_entropy_loss, grad_cross_entropy_loss);
 
     Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv");
     int correct_predictions = 0;
+    double loss_value = 0;
 
     for (size_t epoch = 0; epoch < 30; epoch++)
     {
@@ -64,10 +65,12 @@ int main(void)
                 break;
 
             int is_correct = train(network, num_layers, loss, datapoint, learning_rate);
+            loss_value += loss->error_values->data[0];
             correct_predictions += is_correct;
         }
         printf("correct predictions: %d\t\n", correct_predictions);
-        printf("loss: \t\t%f\n", loss->error_values->data[0]);
+        printf("loss: \t\t%f\n", loss_value / 10000);
+        loss_value = 0;
         correct_predictions = 0;
     }
     for (int i = 0; i < num_layers; i++)

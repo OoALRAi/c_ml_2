@@ -53,6 +53,9 @@ double tanh_func(double value);
 void tanh_act(Matrix *input, Matrix *result);
 void grad_tanh(Matrix *tanh_input, Matrix *next_grad, Matrix *result);
 
+void leaky_relu(Matrix *input, Matrix *result);
+void grad_leaky_relu(Matrix *input, Matrix *next_grad, Matrix *result);
+
 void softmax(Matrix *input, Matrix *result);
 void grad_softmax(Matrix *softmax_input, Matrix *ground_truth, Matrix *result);
 

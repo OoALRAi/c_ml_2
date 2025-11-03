@@ -34,6 +34,37 @@ void grad_relu(Matrix *relu_input, Matrix *next_grad, Matrix *result)
     }
 }
 
+void leaky_relu(Matrix *input, Matrix *result)
+{
+    if (input == NULL)
+    {
+        fprintf(stderr, "input matrix is null\n");
+        exit(-1);
+    }
+    for (size_t y = 0; y < input->rows; y++)
+    {
+        for (size_t x = 0; x < input->cols; x++)
+        {
+            double value = get_element_at(input, x, y);
+            double act_value = value > 0 ? value : 0.1 * value;
+            set_element_at(result, x, y, act_value);
+        }
+    }
+}
+void grad_leaky_relu(Matrix *input, Matrix *next_grad, Matrix *result)
+{
+    for (size_t y = 0; y < input->rows; y++)
+    {
+        for (size_t x = 0; x < input->cols; x++)
+        {
+            double value = get_element_at(input, x, y);
+            double next_grad_value = get_element_at(next_grad, x, y);
+            double grad_value = value > 0 ? next_grad_value : 0.1 * next_grad_value;
+            set_element_at(result, x, y, grad_value);
+        }
+    }
+}
+
 double sigmoid_function(double value)
 {
     return 1 / (1 + exp(-value));
