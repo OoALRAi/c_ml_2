@@ -41,22 +41,22 @@ int main(void)
 {
     int in_dim = 28 * 28;
     int out_dim_1 = 128;
-    int out_dim_2 = 32;
+    int out_dim_2 = 64;
     int out_dim = 10;
-    int num_layers = 3;
-    double learning_rate = 0.0001;
+    int num_layers = 2;
+    double learning_rate = 0.001;
 
     Dense *network[] = {
         create_dense(in_dim, out_dim_1, leaky_relu, grad_leaky_relu),
-        create_dense(out_dim_1, out_dim_2, tanh_act, grad_tanh),
-        create_dense(out_dim_2, out_dim, softmax, grad_softmax)};
+        // create_dense(in_dim, out_dim_2, sigmoid, grad_sigmoid),
+        create_dense(out_dim_1, out_dim, softmax, grad_softmax)};
     Loss *loss = create_loss(cross_entropy_loss, grad_cross_entropy_loss);
 
-    Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv");
+    Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv", 1000);
     int correct_predictions = 0;
     double loss_value = 0;
 
-    for (size_t epoch = 0; epoch < 30; epoch++)
+    for (size_t epoch = 0; epoch < 500; epoch++)
     {
         while (1)
         {
@@ -68,8 +68,7 @@ int main(void)
             loss_value += loss->error_values->data[0];
             correct_predictions += is_correct;
         }
-        printf("correct predictions: %d\t\n", correct_predictions);
-        printf("loss: \t\t%f\n", loss_value / 10000);
+        printf("===\n[EPOCH %zu]\ncorrect predictions: %d\t\t\t loss: %.3f\n===\n", epoch, correct_predictions, loss_value / 1000);
         loss_value = 0;
         correct_predictions = 0;
     }

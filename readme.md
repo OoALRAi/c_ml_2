@@ -11,9 +11,10 @@
 * derivative of softmax in combination with cross entropy loss (done)
 * test network  (done)
 * free memory to prevent memory leaks in forward and backward. (done)
+* add more activation functions (done enough)
 -----------
 
-* add more activation functions
+* improve performance
 * compute statistics to present in github page.
 
 ### Very important Observation:

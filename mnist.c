@@ -82,7 +82,7 @@ void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
     for (int i = 0; i < 28 * 28; i++)
     {
         double value = atof(current_char);
-        value /= 255;
+        value /= 256;
 
         set_element_at(data, i, 0, value);
         current_char = skip_value(current_char);
@@ -97,6 +97,12 @@ Mnist_Datapoint *create_datapoint()
     dp->label = new_mat(1, 10); // one-hot
     dp->data = new_mat(1, 28 * 28);
     return dp;
+}
+void reset_dataset(Mnist_Dataset *ds)
+{
+    ds->used_datapoints = 0;
+    fclose(ds->file);
+    ds->file = NULL;
 }
 
 /**
@@ -118,10 +124,9 @@ Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
         free(next_line);
     }
     char *line_data = read_next_line(dataset->file);
-    if (line_data == NULL)
+    if (line_data == NULL || dataset->used_datapoints >= dataset->size_to_use)
     {
-        fclose(dataset->file);
-        dataset->file = NULL;
+        reset_dataset(dataset);
         return NULL;
     }
     if (dataset->current_datapoint == NULL)
@@ -130,13 +135,16 @@ Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
     }
     parse_line_to_mat(line_data, dataset->current_datapoint->data, dataset->current_datapoint->label);
     free(line_data);
+    dataset->used_datapoints++;
 
     return dataset->current_datapoint;
 }
 
-Mnist_Dataset *create_mnist_from_csv(char *path)
+Mnist_Dataset *create_mnist_from_csv(char *path, int size_to_use)
 {
     Mnist_Dataset *dataset = malloc(sizeof(Mnist_Dataset));
+    dataset->size_to_use = size_to_use;
+    dataset->used_datapoints = 0;
     dataset->path = path;
     dataset->file = NULL;
     dataset->current_datapoint = NULL;

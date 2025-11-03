@@ -89,11 +89,13 @@ void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
         for (size_t x = 0; x < sigmoid_input->cols; x++)
         {
             double value = get_element_at(sigmoid_input, x, y);
+            double next_grad_value = get_element_at(next_grad, x, y);
             double sig_value = sigmoid_function(value);
-            set_element_at(result, x, y, sig_value * (1 - sig_value));
+            double sig_grad_value = sig_value * (1 - sig_value);
+            sig_grad_value *= next_grad_value;
+            set_element_at(result, x, y, sig_grad_value);
         }
     }
-    elementwise_mul_mat_to(next_grad, result, result);
 }
 
 double tanh_func(double value)
