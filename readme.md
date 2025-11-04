@@ -14,8 +14,8 @@
 * add more activation functions (done enough)
 -----------
 
-* improve performance
 * compute statistics to present in github page.
+* precision and recall for each class
 
 ### Very important Observation:
 * deeper netowrk needs smaller learning rate in order to converge correctly!

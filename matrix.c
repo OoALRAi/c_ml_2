@@ -578,7 +578,7 @@ void print_mat(Matrix *m)
     {
         for (int x = 0; x < m->cols; x++)
         {
-            printf("\t%f ", m->data[y * m->cols + x]);
+            printf("\t%.2f ", m->data[y * m->cols + x]);
         }
         printf("\n");
     }

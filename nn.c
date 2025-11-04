@@ -302,7 +302,6 @@ void free_loss(Loss *l)
     }
     if (l->grad_error_values)
     {
-        print_mat(l->grad_error_values);
         free_mat(l->grad_error_values);
     }
     if (l->y != NULL)
