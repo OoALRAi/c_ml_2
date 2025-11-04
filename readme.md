@@ -1,23 +1,15 @@
-## to implement:
+###  Neural Network Framework in c
+very simple neural network framework in c with which users can implement feedforward NNs to solve classification and regression problems.
 
-### nn lib
-* sigmoid (done)
-* softmax (done)
-* backward (done)
-* test softamx (done)
-* mnist is implemented
-* solve a bug cause the one hot encoding to have multiple ones at once. (done)
-* mnist problem solved with 3 layers deep network where first 2 layers have relu as act function and last one softmax to compute probabilities. loss function is cross entropy loss.
-* derivative of softmax in combination with cross entropy loss (done)
-* test network  (done)
-* free memory to prevent memory leaks in forward and backward. (done)
-* add more activation functions (done enough)
------------
+in main.c the framework is tested on mnist dataset. the model consists of 2 layers, first layer has leaky relu as activation function and second layer has softmax as activation function. the model uses cross entropy loss as loss function.
 
-* compute statistics to present in github page.
-* precision and recall for each class
+**size of training set&ensp;  = 3500**<br>
+**size of test set &emsp;&emsp; = 1500**
 
-### Very important Observation:
-* deeper netowrk needs smaller learning rate in order to converge correctly!
+following is the precision statistics after 30th epochs:
 
-* 3 layers to solve mnist classification problem with no memory leaks consumes only 3.6MB
+<img src="./assets/pic1.png" width=300px>
+
+<font size=1pt>
+the sybols "(+)", "(-)" and "(=)" besides each stat value is a comparision to value of previous epoch, for e.g. 0.91(-) means that the precision of class "0" of the current epoch is smaller than the precision of same class of previous epoch.
+</font>

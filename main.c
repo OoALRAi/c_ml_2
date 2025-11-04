@@ -29,15 +29,19 @@ void backward_pass(Dense *network[], int num_layers, Loss *loss, double lr)
     }
 }
 
-int train(Dense *network[], int num_layers, Loss *loss, Mnist_Datapoint *dp, double lr, Matrix *confusion_mat)
+int train(Dense *network[], int num_layers, Loss *loss, Mnist_Datapoint *dp, double lr)
+{
+    Matrix *pred = forward_pass(network, num_layers, dp);
+    loss_forward(loss, dp->label, pred);
+    backward_pass(network, num_layers, loss, lr);
+    return 0;
+}
+void test(Dense *network[], int num_layers, Mnist_Datapoint *dp, Confusion_Matrix *confusion_mat)
 {
     Matrix *pred = forward_pass(network, num_layers, dp);
     int pred_value = argmax(pred);
     int gt_value = argmax(dp->label);
     add_prediction(confusion_mat, gt_value, pred_value);
-    loss_forward(loss, dp->label, pred);
-    backward_pass(network, num_layers, loss, lr);
-    return (pred_value == gt_value);
 }
 
 int main(void)
@@ -48,32 +52,41 @@ int main(void)
     int num_layers = 2;
     double learning_rate = 0.001;
     int num_class = 10; // 10 different classes in mnist
+    int dataset_size = 5000;
+    int trainset_size = (int)(0.7 * dataset_size);
 
     Dense *network[] = {
         create_dense(in_dim, out_dim_1, leaky_relu, grad_leaky_relu),
         create_dense(out_dim_1, out_dim, softmax, grad_softmax)};
     Loss *loss = create_loss(cross_entropy_loss, grad_cross_entropy_loss);
 
-    Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv", 1000);
+    Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv", dataset_size);
     double loss_value = 0;
+    Confusion_Matrix *confusion_mat = create_confision_matrix(num_class);
 
-    Matrix *confusion_mat = create_confision_matrix(num_class);
-
-    for (size_t epoch = 0; epoch < 500; epoch++)
+    for (size_t epoch = 0; epoch < 200; epoch++)
     {
         while (1)
         {
-            Mnist_Datapoint *datapoint = mnist_next_datapoint(dataset);
-            if (datapoint == NULL)
+            Mnist_Datapoint *datapoint = get_next_datapoint(dataset);
+            if (datapoint == NULL || dataset->current_dp_index == trainset_size)
                 break;
 
-            int is_correct = train(network, num_layers, loss, datapoint, learning_rate, confusion_mat);
+            int is_correct = train(network, num_layers, loss, datapoint, learning_rate);
             loss_value += loss->error_values->data[0];
         }
         printf("===\n[EPOCH %zu]\n", epoch);
-        print_stats(confusion_mat);
+        printf("loss: %.4f\n\n", loss_value / trainset_size);
         loss_value = 0;
-        break;
+        while (1)
+        {
+            Mnist_Datapoint *datapoint = get_next_datapoint(dataset);
+            if (datapoint == NULL)
+                break;
+            test(network, num_layers, datapoint, confusion_mat);
+        }
+        print_stats(confusion_mat);
+        end_epoch(confusion_mat);
     }
     for (int i = 0; i < num_layers; i++)
     {
@@ -81,7 +94,6 @@ int main(void)
         free_dense(d);
     }
 
-    free_mat(confusion_mat);
     free_loss(loss);
     free_dataset(dataset);
 

@@ -11,22 +11,25 @@ typedef struct Mnist_Datapoint
 
 typedef struct Mnist_Dataset
 {
-    int size_to_use;
-    int used_datapoints;
-
     char *path;
-    FILE *file;
-    // first row is the legend
-    Mnist_Datapoint *current_datapoint;
+    int size_to_use;
+    int current_dp_index;
+
+    Mnist_Datapoint **datapoints;
 
 } Mnist_Dataset;
 
 void one_hot_label(int label, Matrix *result);
 int label_from_one_hot(Matrix *one_hot_label);
+
 Mnist_Datapoint *create_datapoint();
-Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset);
 Mnist_Dataset *create_mnist_from_csv(char *path, int size_to_use);
+char *read_next_line(FILE *fp);
+int read_next_dp_from_file(FILE *file, Mnist_Datapoint *dp);
+
+Mnist_Datapoint *get_next_datapoint(Mnist_Dataset *dataset);
+
+void free_datapoint(Mnist_Datapoint *dp);
 void free_dataset(Mnist_Dataset *dataset);
-void free_dataopint(Mnist_Datapoint *dp);
 
 #endif

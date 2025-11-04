@@ -9,12 +9,12 @@ int main()
 
     Dense *d = create_dense(28 * 28, 10, softmax, grad_softmax);
     Loss *loss = create_loss(cross_entropy_loss, grad_cross_entropy_loss);
-    Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv");
+    Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv", 5);
     int count = 0;
-    while (count < 2)
+    while (1)
     {
         printf("\n\n=========\ncounter: %d\n=========\n\n", count);
-        Mnist_Datapoint *datapoint = mnist_next_datapoint(dataset);
+        Mnist_Datapoint *datapoint = get_next_datapoint(dataset);
         if (datapoint == NULL)
             break;
         Matrix *gt = new_mat(1, 10);

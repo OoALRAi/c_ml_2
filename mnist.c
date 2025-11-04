@@ -98,75 +98,64 @@ Mnist_Datapoint *create_datapoint()
     dp->data = new_mat(1, 28 * 28);
     return dp;
 }
-void reset_dataset(Mnist_Dataset *ds)
-{
-    ds->used_datapoints = 0;
-    fclose(ds->file);
-    ds->file = NULL;
-}
 
-/**
- * returns next datapoint in mnist dataset
- * if the dataset has no more datapoints it resets and returns NULL
- * the next time calling this function will return the first datapoint again.
- */
-Mnist_Datapoint *mnist_next_datapoint(Mnist_Dataset *dataset)
+int read_next_dp_from_file(FILE *file, Mnist_Datapoint *dp)
 {
-    if (dataset == NULL)
+    char *line = read_next_line(file);
+    if (line == NULL)
     {
-        fprintf(stderr, "dataset is null\n");
-        exit(0);
+        return 0;
     }
-    if (dataset->file == NULL)
+    parse_line_to_mat(line, dp->data, dp->label);
+    return 1;
+}
+Mnist_Datapoint *get_next_datapoint(Mnist_Dataset *dataset)
+{
+    if (dataset->current_dp_index >= dataset->size_to_use)
     {
-        dataset->file = fopen(dataset->path, "r");
-        char *next_line = read_next_line(dataset->file); // skip legend
-        free(next_line);
-    }
-    char *line_data = read_next_line(dataset->file);
-    if (line_data == NULL || dataset->used_datapoints >= dataset->size_to_use)
-    {
-        reset_dataset(dataset);
+        dataset->current_dp_index = 0;
         return NULL;
     }
-    if (dataset->current_datapoint == NULL)
-    {
-        dataset->current_datapoint = create_datapoint();
-    }
-    parse_line_to_mat(line_data, dataset->current_datapoint->data, dataset->current_datapoint->label);
-    free(line_data);
-    dataset->used_datapoints++;
-
-    return dataset->current_datapoint;
+    Mnist_Datapoint *dp = dataset->datapoints[dataset->current_dp_index];
+    dataset->current_dp_index++;
+    return dp;
 }
 
 Mnist_Dataset *create_mnist_from_csv(char *path, int size_to_use)
 {
     Mnist_Dataset *dataset = malloc(sizeof(Mnist_Dataset));
     dataset->size_to_use = size_to_use;
-    dataset->used_datapoints = 0;
+    dataset->current_dp_index = 0;
     dataset->path = path;
-    dataset->file = NULL;
-    dataset->current_datapoint = NULL;
+    dataset->datapoints = calloc(dataset->size_to_use, sizeof(Mnist_Datapoint *));
+
+    FILE *file = fopen(path, "r");
+    read_next_line(file); // skip first line
+
+    for (int i = 0; i < dataset->size_to_use; ++i)
+    {
+        Mnist_Datapoint *dp = create_datapoint();
+        dataset->datapoints[i] = dp;
+        if (!read_next_dp_from_file(file, dp))
+            break;
+    }
+    fclose(file);
     return dataset;
+}
+
+void free_datapoint(Mnist_Datapoint *dp)
+{
+    free_mat(dp->data);
+    free_mat(dp->label);
+    free(dp);
 }
 
 void free_dataset(Mnist_Dataset *dataset)
 {
-    fclose(dataset->file);
-    if (dataset->current_datapoint)
+    for (int i = 0; i < dataset->size_to_use; i++)
     {
-        free_dataopint(dataset->current_datapoint);
+        free_datapoint(dataset->datapoints[i]);
     }
+    free(dataset->datapoints);
     free(dataset);
-    // TODO: free other resources
-}
-
-void free_dataopint(Mnist_Datapoint *dp)
-{
-
-    free_mat(dp->data);
-    free_mat(dp->label);
-    free(dp);
-    // TODO: free datapoint
 }
