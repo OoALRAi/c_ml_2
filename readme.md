@@ -13,3 +13,32 @@ following is the precision statistics after 30th epochs:
 <font size=1pt>
 the sybols "(+)", "(-)" and "(=)" besides each stat value is a comparision to value of previous epoch, for e.g. 0.91(-) means that the precision of class "0" of the current epoch is smaller than the precision of same class of previous epoch.
 </font>
+
+---
+
+### Support:
+**supported layers types**:<br>
+* Linear Layer | represented by struct Dense
+
+**supported activation functions**:<br>
+* relu
+* leaky relu
+* tanh
+* sigmoid
+* softmax
+
+**supported loss functions**:<br>
+* mse
+* cross entroppy loss
+
+---
+### Worth to implement:
+**supported layers types**:<br>
+* Convolution Layer
+* Pooling Layers
+* Batch Normalization
+
+**supported loss functions**:<br>
+* BCE
+* IOU
+
