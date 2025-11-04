@@ -1,7 +1,7 @@
 ###  Neural Network Framework in c
 very simple neural network framework in c with which users can implement feedforward NNs to solve classification and regression problems.
 
-in main.c the framework is tested on mnist dataset. the model consists of 2 layers, first layer has leaky relu as activation function and second layer has softmax as activation function. the model uses cross entropy loss as loss function.
+in [main.c](main.c) the framework is tested on mnist dataset. the model consists of 2 layers, first layer has leaky relu as activation function and second layer has softmax as activation function. the model uses cross entropy loss as loss function.
 
 **size of training set&ensp;  = 3500**<br>
 **size of test set &emsp;&emsp; = 1500**
