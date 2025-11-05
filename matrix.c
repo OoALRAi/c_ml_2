@@ -53,14 +53,14 @@ void free_mat(Matrix *m)
 Matrix *zeros(int rows, int cols)
 {
     Matrix *r = new_mat(rows, cols);
-    const_fill_mat(0, r);
+    fill_mat_with(0, r);
     return r;
 }
 
 Matrix *ones(int rows, int cols)
 {
     Matrix *r = new_mat(rows, cols);
-    const_fill_mat(1, r);
+    fill_mat_with(1, r);
     return r;
 }
 int check_sizes(Matrix *m1, Matrix *m2)
@@ -349,7 +349,7 @@ Matrix *mul_mat(Matrix *a, Matrix *b)
     return r;
 }
 
-Matrix *elementwise_div_mat(Matrix *a, Matrix *b)
+Matrix *e_div_mat(Matrix *a, Matrix *b)
 {
     Matrix *r = new_mat(a->rows, a->cols);
     e_div_mat_to(a, b, r);
@@ -425,7 +425,7 @@ void scale_mat_to(Matrix *m, double scaler, Matrix *result)
     }
 }
 
-Matrix *elementwise_mul_mat(Matrix *a, Matrix *b)
+Matrix *e_mul_mat(Matrix *a, Matrix *b)
 {
 
     Matrix *r = new_mat(a->rows, a->cols);
@@ -433,7 +433,7 @@ Matrix *elementwise_mul_mat(Matrix *a, Matrix *b)
     return r;
 }
 
-Matrix *elementwise_pow_mat(Matrix *m, double pow_value)
+Matrix *e_pow_mat(Matrix *m, double pow_value)
 {
     if (m == NULL)
     {
@@ -544,7 +544,7 @@ void copy_mat(Matrix *source, Matrix *target)
     }
 }
 
-void const_fill_mat(double value, Matrix *m)
+void fill_mat_with(double value, Matrix *m)
 {
     if (m == NULL)
     {

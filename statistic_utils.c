@@ -20,7 +20,7 @@ void add_prediction(Confusion_Matrix *cm, int gt, int pred)
 void end_epoch(Confusion_Matrix *cm)
 {
     copy_mat(cm->current_cm, cm->previous_cm);
-    const_fill_mat(0, cm->current_cm);
+    fill_mat_with(0, cm->current_cm);
 }
 
 int get_TP_of(Matrix *cm, int cls)

@@ -23,8 +23,7 @@ Matrix *ones(int rows, int cols);
 int check_sizes(Matrix *m1, Matrix *m2);
 int check_sizes_for_dot(Matrix *m1, Matrix *m2);
 
-// these operation create no new result matrix but stroe the result to
-// already allocated matrix
+// ==== no memory allocation in these operations ====
 void add_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void sub_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void dot_to(Matrix *a, Matrix *b, Matrix *result);
@@ -35,26 +34,27 @@ void e_mul_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void transpose_mat_to(Matrix *m, Matrix *result);
 void e_pow_mat_to(Matrix *m, Matrix *result, double pow_value);
 void scale_mat_to(Matrix *m, double scaler, Matrix *result);
-
-void transpose_mat_inplace(Matrix *m);
-
 void scale_mat_inplace(Matrix *m, double scaler);
 
-// these operation allocate new result matrix and return it.
+void transpose_mat_inplace(Matrix *m);
+double max(Matrix *m);
+int argmax(Matrix *m);
+// ==== no memory allocation in these operations ====
+
+// ==== memory allocation ====
 Matrix *add_mat(Matrix *a, Matrix *b);
 Matrix *sub_mat(Matrix *a, Matrix *b);
 Matrix *mul_mat(Matrix *a, Matrix *b);
-Matrix *elementwise_div_mat(Matrix *a, Matrix *b);
+Matrix *e_div_mat(Matrix *a, Matrix *b);
 Matrix *div_mat_by_value(Matrix *m, double value);
-Matrix *elementwise_mul_mat(Matrix *a, Matrix *b);
-Matrix *elementwise_pow_mat(Matrix *m, double pow_value);
+Matrix *e_mul_mat(Matrix *a, Matrix *b);
+Matrix *e_pow_mat(Matrix *m, double pow_value);
 Matrix *transpose_mat(Matrix *m);
-double max(Matrix *m);
-int argmax(Matrix *m);
+// ==== memory allocation ====
 
 // help functions to fill matrix
 void copy_mat(Matrix *source, Matrix *target);
-void const_fill_mat(double value, Matrix *m);
+void fill_mat_with(double value, Matrix *m);
 void stepwise_fill_mat(double start, double step, Matrix *m);
 Matrix *random_mat(int rows, int cols);
 void random_fill_mat(Matrix *m);
