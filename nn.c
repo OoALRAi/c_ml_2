@@ -15,9 +15,9 @@ void relu(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y);
+            double value = GET_ELEMENT_AT(input, x, y);
             double act_value = value > 0 ? value : 0;
-            set_element_at(result, x, y, act_value);
+            SET_ELEMENT_AT(result, x, y, act_value);
         }
     }
 }
@@ -28,8 +28,8 @@ void grad_relu(Matrix *relu_input, Matrix *next_grad, Matrix *result)
     {
         for (size_t x = 0; x < relu_input->cols; x++)
         {
-            double value = get_element_at(relu_input, x, y);
-            set_element_at(result, x, y, value > 0 ? get_element_at(next_grad, x, y) : 0);
+            double value = GET_ELEMENT_AT(relu_input, x, y);
+            SET_ELEMENT_AT(result, x, y, value > 0 ? GET_ELEMENT_AT(next_grad, x, y) : 0);
         }
     }
 }
@@ -45,9 +45,9 @@ void leaky_relu(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y);
+            double value = GET_ELEMENT_AT(input, x, y);
             double act_value = value > 0 ? value : 0.1 * value;
-            set_element_at(result, x, y, act_value);
+            SET_ELEMENT_AT(result, x, y, act_value);
         }
     }
 }
@@ -57,10 +57,10 @@ void grad_leaky_relu(Matrix *input, Matrix *next_grad, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y);
-            double next_grad_value = get_element_at(next_grad, x, y);
+            double value = GET_ELEMENT_AT(input, x, y);
+            double next_grad_value = GET_ELEMENT_AT(next_grad, x, y);
             double grad_value = value > 0 ? next_grad_value : 0.1 * next_grad_value;
-            set_element_at(result, x, y, grad_value);
+            SET_ELEMENT_AT(result, x, y, grad_value);
         }
     }
 }
@@ -76,8 +76,8 @@ void sigmoid(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y);
-            set_element_at(result, x, y, sigmoid_function(value));
+            double value = GET_ELEMENT_AT(input, x, y);
+            SET_ELEMENT_AT(result, x, y, sigmoid_function(value));
         }
     }
 }
@@ -88,12 +88,12 @@ void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
     {
         for (size_t x = 0; x < sigmoid_input->cols; x++)
         {
-            double value = get_element_at(sigmoid_input, x, y);
-            double next_grad_value = get_element_at(next_grad, x, y);
+            double value = GET_ELEMENT_AT(sigmoid_input, x, y);
+            double next_grad_value = GET_ELEMENT_AT(next_grad, x, y);
             double sig_value = sigmoid_function(value);
             double sig_grad_value = sig_value * (1 - sig_value);
             sig_grad_value *= next_grad_value;
-            set_element_at(result, x, y, sig_grad_value);
+            SET_ELEMENT_AT(result, x, y, sig_grad_value);
         }
     }
 }
@@ -109,8 +109,8 @@ void tanh_act(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y);
-            set_element_at(result, x, y, tanh_func(value));
+            double value = GET_ELEMENT_AT(input, x, y);
+            SET_ELEMENT_AT(result, x, y, tanh_func(value));
         }
     }
 }
@@ -121,10 +121,10 @@ void grad_tanh(Matrix *tanh_input, Matrix *next_grad, Matrix *result)
     {
         for (size_t x = 0; x < tanh_input->cols; x++)
         {
-            double value = get_element_at(tanh_input, x, y);
+            double value = GET_ELEMENT_AT(tanh_input, x, y);
             value = 1 - powf(tanh_func(value), 2.0);
-            value *= get_element_at(next_grad, x, y);
-            set_element_at(result, x, y, value);
+            value *= GET_ELEMENT_AT(next_grad, x, y);
+            SET_ELEMENT_AT(result, x, y, value);
         }
     }
 }
@@ -137,7 +137,7 @@ void softmax(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y) - max_value;
+            double value = GET_ELEMENT_AT(input, x, y) - max_value;
             double exp_value = exp(value);
             sum_exp += exp_value;
         }
@@ -147,9 +147,9 @@ void softmax(Matrix *input, Matrix *result)
     {
         for (size_t x = 0; x < input->cols; x++)
         {
-            double value = get_element_at(input, x, y) - max_value;
+            double value = GET_ELEMENT_AT(input, x, y) - max_value;
             double exp_value = exp(value);
-            set_element_at(result, x, y, exp_value / sum_exp);
+            SET_ELEMENT_AT(result, x, y, exp_value / sum_exp);
         }
     }
 }
@@ -166,7 +166,6 @@ void grad_softmax(Matrix *softmax_input, Matrix *ground_truth, Matrix *result)
 void identity_func(Matrix *input, Matrix *result)
 {
     copy_mat(input, result);
-    printf("###\n%f\n###\n", exp(20));
 }
 void grad_identity_func(Matrix *input, Matrix *next_grad, Matrix *result)
 {
@@ -177,14 +176,14 @@ void grad_identity_func(Matrix *input, Matrix *next_grad, Matrix *result)
 Matrix *mse(Matrix *y, Matrix *y_hat)
 {
     Matrix *result = sub_mat(y, y_hat);
-    elementwise_pow_mat_to(result, result, 2);
-    div_mat_by_value_to(result, result, 2);
+    e_pow_mat_to(result, result, 2);
+    div_mat_by_value_to(result, 2, result);
     return result;
 }
 Matrix *grad_mse(Matrix *y, Matrix *y_hat)
 {
     Matrix *sub = sub_mat(y, y_hat);
-    multiply_mat_with_value_to(sub, sub, -1);
+    scale_mat_to(sub, -1, sub);
     return sub;
 }
 
@@ -200,11 +199,11 @@ Matrix *cross_entropy_loss(Matrix *y, Matrix *y_hat)
         for (int xi = 0; xi < y->cols; xi++)
         {
             // y_i * log (y_i_hat)
-            sum -= get_element_at(y, xi, yi) * log(get_element_at(y_hat, xi, yi));
+            sum -= GET_ELEMENT_AT(y, xi, yi) * log(GET_ELEMENT_AT(y_hat, xi, yi));
         }
     }
     Matrix *r = new_mat(1, 1);
-    set_element_at(r, 0, 0, sum);
+    SET_ELEMENT_AT(r, 0, 0, sum);
     return r;
 }
 
@@ -339,7 +338,7 @@ void print_dense(Dense *d)
 Matrix *forward(Dense *d, Matrix *input)
 {
     copy_mat(input, d->input);
-    mul_mat_to(input, d->weights, d->out_pred_act);
+    dot_to(input, d->weights, d->out_pred_act);
     add_mat_to(d->out_pred_act, d->bias, d->out_pred_act);
     d->activation(d->out_pred_act, d->out_post_act);
     return d->out_post_act;
@@ -354,13 +353,13 @@ void backward(Dense *d, Matrix *next_grad, double lr)
     if (d->dw == NULL)
     {
         Matrix *dw = mul_mat(dydw, d->dz);
-        multiply_mat_with_value_to(dw, dw, lr);
+        scale_mat_to(dw, lr, dw);
         d->dw = dw;
     }
     else
     {
-        mul_mat_to(dydw, d->dz, d->dw);
-        multiply_mat_with_value_to(d->dw, d->dw, lr);
+        dot_to(dydw, d->dz, d->dw);
+        scale_mat_to(d->dw, lr, d->dw);
     }
     free_mat(dydw);
     sub_mat_to(d->weights, d->dw, d->weights);
@@ -369,13 +368,13 @@ void backward(Dense *d, Matrix *next_grad, double lr)
     {
         d->db = new_mat(d->bias->rows, d->bias->cols);
         copy_mat(d->dz, d->db);
-        multiply_mat_with_value_to(d->db, d->db, lr);
+        scale_mat_to(d->db, lr, d->db);
         sub_mat_to(d->bias, d->db, d->bias);
     }
     else
     {
         copy_mat(d->dz, d->db);
-        multiply_mat_with_value_to(d->db, d->db, lr);
+        scale_mat_to(d->db, lr, d->db);
         sub_mat_to(d->bias, d->db, d->bias);
     }
 

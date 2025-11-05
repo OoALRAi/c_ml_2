@@ -1,6 +1,9 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#define GET_ELEMENT_AT(m, x, y) (m->data[y * (m->cols) + x])
+#define SET_ELEMENT_AT(m, x, y, v) (m->data[y * (m->cols) + x] = v)
+
 typedef struct Matrix
 {
     int rows;
@@ -17,21 +20,21 @@ void print_mat(Matrix *m);
 Matrix *zeros(int rows, int cols);
 Matrix *ones(int rows, int cols);
 
-double get_element_at(Matrix *m, int x, int y);
-void set_element_at(Matrix *m, int x, int y, double value);
+int check_sizes(Matrix *m1, Matrix *m2);
+int check_sizes_for_dot(Matrix *m1, Matrix *m2);
 
 // these operation create no new result matrix but stroe the result to
 // already allocated matrix
 void add_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void sub_mat_to(Matrix *a, Matrix *b, Matrix *result);
-void mul_mat_to(Matrix *a, Matrix *b, Matrix *result);
+void dot_to(Matrix *a, Matrix *b, Matrix *result);
 
-void elementwise_div_mat_to(Matrix *a, Matrix *b, Matrix *result);
-void div_mat_by_value_to(Matrix *m, Matrix *result, double value);
-void elementwise_mul_mat_to(Matrix *a, Matrix *b, Matrix *result);
+void e_div_mat_to(Matrix *a, Matrix *b, Matrix *result);
+void div_mat_by_value_to(Matrix *m, double value, Matrix *result);
+void e_mul_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void transpose_mat_to(Matrix *m, Matrix *result);
-void elementwise_pow_mat_to(Matrix *m, Matrix *result, double pow_value);
-void multiply_mat_with_value_to(Matrix *m, Matrix *result, double value);
+void e_pow_mat_to(Matrix *m, Matrix *result, double pow_value);
+void scale_mat_to(Matrix *m, double scaler, Matrix *result);
 
 void transpose_mat_inplace(Matrix *m);
 

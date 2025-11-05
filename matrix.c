@@ -63,65 +63,29 @@ Matrix *ones(int rows, int cols)
     const_fill_mat(1, r);
     return r;
 }
-double get_element_at(Matrix *m, int x, int y)
+int check_sizes(Matrix *m1, Matrix *m2)
 {
-
-    if (m == NULL)
-    {
-        fprintf(stderr, "m is null\n");
-        exit(-1);
-    }
-    if (x >= m->cols || y >= m->rows || x < 0 || y < 0)
-    {
-        fprintf(stderr, "pos out of bound\n");
-        exit(-1);
-    }
-    return m->data[y * m->cols + x];
+    /*
+    check if given matrices are of same sizes
+    return: 1 if same sizes, 0 if different sizes
+    */
+    return m1 != NULL && m2 != NULL && m1->cols == m2->cols && m1->rows == m2->rows;
 }
-void set_element_at(Matrix *m, int x, int y, double value)
+int check_sizes_for_dot(Matrix *m1, Matrix *m2)
 {
-
-    if (m == NULL)
-    {
-        fprintf(stderr, "m is null\n");
-        exit(-1);
-    }
-    if (x >= m->cols || y >= m->rows || x < 0 || y < 0)
-    {
-        fprintf(stderr, "pos out of bound\n");
-        exit(-1);
-    }
-    m->data[y * m->cols + x] = value;
+    /*
+    check if sizes of given matrices are appropriate for dot product;
+    return: 1 if appropriate, else 0
+    */
+    return m1 != NULL && m2 != NULL && m1->cols == m2->rows;
 }
 
 void add_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
-    if (a == NULL)
+    int equal_sizes = check_sizes(a, b);
+    if (equal_sizes == 0)
     {
-        fprintf(stderr, "matrix a is null\n");
-        exit(-1);
-    }
-    else if (b == NULL)
-    {
-        fprintf(stderr, "matrix b is null\n");
-        exit(-1);
-    }
-    else if (result == NULL)
-    {
-        fprintf(stderr, "result matrix is null\n");
-        exit(-1);
-    }
-
-    if (a->rows != b->rows || a->cols != b->cols)
-    {
-        fprintf(stderr, "cannot add matrices of different dims, dim a: (%d,%d) != dim b: (%d,%d)\n",
-                a->rows, a->cols, b->rows, b->cols);
-        exit(-1);
-    }
-    if (result->rows != a->rows || result->cols != a->cols)
-    {
-        fprintf(stderr, "expected result matrix of size (%dx%d), but got result matrix of size (%dx%d)\n",
-                a->rows, a->cols, result->rows, result->cols);
+        fprintf(stderr, "[%s] matrices have different sizes or are null\n", __FUNCTION__);
         exit(-1);
     }
 
@@ -129,39 +93,17 @@ void add_mat_to(Matrix *a, Matrix *b, Matrix *result)
     {
         for (int x = 0; x < a->cols; x++)
         {
-            set_element_at(result, x, y, get_element_at(a, x, y) + get_element_at(b, x, y));
+            SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) + GET_ELEMENT_AT(b, x, y));
         }
     }
 }
 
 void sub_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
-    if (a == NULL)
+    int equal_sizes = check_sizes(a, b);
+    if (equal_sizes == 0)
     {
-        fprintf(stderr, "matrix a is null\n");
-        exit(-1);
-    }
-    else if (b == NULL)
-    {
-        fprintf(stderr, "matrix b is null\n");
-        exit(-1);
-    }
-    else if (result == NULL)
-    {
-        fprintf(stderr, "result matrix is null\n");
-        exit(-1);
-    }
-
-    if (a->rows != b->rows || a->cols != b->cols)
-    {
-        fprintf(stderr, "cannot sub matrices of different dims, dim a: (%d,%d) != dim b: (%d,%d)\n",
-                a->rows, a->cols, b->rows, b->cols);
-        exit(-1);
-    }
-    if (result->rows != a->rows || result->cols != a->cols)
-    {
-        fprintf(stderr, "expected result matrix of size (%dx%d), but got result matrix of size (%dx%d)\n",
-                a->rows, a->cols, result->rows, result->cols);
+        fprintf(stderr, "[%s] matrices have different sizes or are null\n", __FUNCTION__);
         exit(-1);
     }
 
@@ -169,39 +111,30 @@ void sub_mat_to(Matrix *a, Matrix *b, Matrix *result)
     {
         for (int x = 0; x < a->cols; x++)
         {
-            set_element_at(result, x, y, get_element_at(a, x, y) - get_element_at(b, x, y));
+            SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) - GET_ELEMENT_AT(b, x, y));
         }
     }
 }
 
-void mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
+void dot_to(Matrix *a, Matrix *b, Matrix *result)
 
 {
-    if (a == NULL)
+    int check_results = check_sizes_for_dot(a, b);
+    if (check_results == 0)
     {
-        fprintf(stderr, "matrix a is null\n");
+        fprintf(stderr, "[%s] dot product not possible\n", __FUNCTION__);
         exit(-1);
     }
-    else if (b == NULL)
+    if (result == NULL)
     {
-        fprintf(stderr, "matrix b is null\n");
-        exit(-1);
-    }
-    else if (result == NULL)
-    {
-        fprintf(stderr, "matrix result is null\n");
-        exit(-1);
-    }
-    if (a->cols != b->rows)
-    {
-        fprintf(stderr, "matrix multiplication not possible, dim a: (%d,%d), dim b: (%d,%d)\n",
-                a->rows, a->cols, b->rows, b->cols);
+        fprintf(stderr, "[%s] matrix result is null\n", __FUNCTION__);
         exit(-1);
     }
     if (result->rows != a->rows || result->cols != b->cols)
     {
 
-        fprintf(stderr, "dim of result matrix is invalid, expected dim result: (%d,%d), actual dim result: (%d,%d)\n",
+        fprintf(stderr, "[%s] dim of result matrix is invalid, expected dim result: (%d,%d), actual dim result: (%d,%d)\n",
+                __FUNCTION__,
                 a->rows, b->cols, result->rows, result->cols);
         exit(-1);
     }
@@ -212,15 +145,14 @@ void mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
             double acc = 0;
             for (int i = 0; i < a->cols; i++)
             {
-                acc += get_element_at(a, i, y) * get_element_at(b, x, i);
+                acc += GET_ELEMENT_AT(a, i, y) * GET_ELEMENT_AT(b, x, i);
             }
-            set_element_at(result, x, y, acc);
-            //  result->data[y * result->cols + x] = acc;
+            SET_ELEMENT_AT(result, x, y, acc);
         }
     }
 }
 
-void elementwise_div_mat_to(Matrix *a, Matrix *b, Matrix *result)
+void e_div_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
     if (a == NULL)
     {
@@ -251,12 +183,12 @@ void elementwise_div_mat_to(Matrix *a, Matrix *b, Matrix *result)
     {
         for (int x = 0; x < a->cols; x++)
         {
-            set_element_at(result, x, y, get_element_at(a, x, y) / get_element_at(b, x, y));
+            SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) / GET_ELEMENT_AT(b, x, y));
         }
     }
 }
 
-void elementwise_mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
+void e_mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
     {
         if (a == NULL)
@@ -288,7 +220,7 @@ void elementwise_mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
         {
             for (int x = 0; x < a->cols; x++)
             {
-                set_element_at(result, x, y, get_element_at(a, x, y) * get_element_at(b, x, y));
+                SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) * GET_ELEMENT_AT(b, x, y));
             }
         }
     }
@@ -316,12 +248,12 @@ void transpose_mat_to(Matrix *m, Matrix *result)
     {
         for (size_t x = 0; x < m->cols; x++)
         {
-            set_element_at(result, y, x, get_element_at(m, x, y));
+            SET_ELEMENT_AT(result, y, x, GET_ELEMENT_AT(m, x, y));
         }
     }
 }
 
-void elementwise_pow_mat_to(Matrix *m, Matrix *result, double pow_value)
+void e_pow_mat_to(Matrix *m, Matrix *result, double pow_value)
 {
     if (m == NULL)
     {
@@ -343,8 +275,8 @@ void elementwise_pow_mat_to(Matrix *m, Matrix *result, double pow_value)
     {
         for (size_t x = 0; x < m->cols; x++)
         {
-            double value = get_element_at(m, x, y);
-            set_element_at(
+            double value = GET_ELEMENT_AT(m, x, y);
+            SET_ELEMENT_AT(
                 result, x, y,
                 pow(value, pow_value));
         }
@@ -391,7 +323,7 @@ void scale_mat_inplace(Matrix *m, double scaler)
 
         for (size_t x = 0; x < m->cols; x++)
         {
-            set_element_at(m, x, y, get_element_at(m, x, y) * scaler);
+            SET_ELEMENT_AT(m, x, y, GET_ELEMENT_AT(m, x, y) * scaler);
         }
     }
 }
@@ -413,18 +345,18 @@ Matrix *sub_mat(Matrix *a, Matrix *b)
 Matrix *mul_mat(Matrix *a, Matrix *b)
 {
     Matrix *r = new_mat(a->rows, b->cols);
-    mul_mat_to(a, b, r);
+    dot_to(a, b, r);
     return r;
 }
 
 Matrix *elementwise_div_mat(Matrix *a, Matrix *b)
 {
     Matrix *r = new_mat(a->rows, a->cols);
-    elementwise_div_mat_to(a, b, r);
+    e_div_mat_to(a, b, r);
     return r;
 }
 
-void div_mat_by_value_to(Matrix *m, Matrix *result, double value)
+void div_mat_by_value_to(Matrix *m, double value, Matrix *result)
 {
     if (m == NULL)
     {
@@ -446,9 +378,9 @@ void div_mat_by_value_to(Matrix *m, Matrix *result, double value)
     {
         for (size_t x = 0; x < m->cols; x++)
         {
-            set_element_at(
+            SET_ELEMENT_AT(
                 result, x, y,
-                get_element_at(m, x, y) / value);
+                GET_ELEMENT_AT(m, x, y) / value);
         }
     }
 }
@@ -461,10 +393,10 @@ Matrix *div_mat_by_value(Matrix *m, double value)
         exit(-1);
     }
     Matrix *result = new_mat(m->rows, m->cols);
-    div_mat_by_value_to(m, result, value);
+    div_mat_by_value_to(m, value, result);
     return result;
 }
-void multiply_mat_with_value_to(Matrix *m, Matrix *result, double value)
+void scale_mat_to(Matrix *m, double scaler, Matrix *result)
 {
     if (m == NULL)
     {
@@ -486,9 +418,9 @@ void multiply_mat_with_value_to(Matrix *m, Matrix *result, double value)
     {
         for (size_t x = 0; x < m->cols; x++)
         {
-            set_element_at(
+            SET_ELEMENT_AT(
                 result, x, y,
-                get_element_at(m, x, y) * value);
+                GET_ELEMENT_AT(m, x, y) * scaler);
         }
     }
 }
@@ -497,7 +429,7 @@ Matrix *elementwise_mul_mat(Matrix *a, Matrix *b)
 {
 
     Matrix *r = new_mat(a->rows, a->cols);
-    elementwise_mul_mat_to(a, b, r);
+    e_mul_mat_to(a, b, r);
     return r;
 }
 
@@ -509,7 +441,7 @@ Matrix *elementwise_pow_mat(Matrix *m, double pow_value)
         exit(-1);
     }
     Matrix *result = new_mat(m->rows, m->cols);
-    elementwise_pow_mat_to(m, result, pow_value);
+    e_pow_mat_to(m, result, pow_value);
     return result;
 }
 
@@ -532,7 +464,7 @@ double max(Matrix *m)
     {
         for (int x = 0; x < m->cols; x++)
         {
-            double v = get_element_at(m, x, y);
+            double v = GET_ELEMENT_AT(m, x, y);
             max = v > max ? v : max;
         }
     }
@@ -549,7 +481,7 @@ int argmax(Matrix *m)
     int arg = -1;
     for (int x = 0; x < m->cols; x++)
     {
-        double v = get_element_at(m, x, 0);
+        double v = GET_ELEMENT_AT(m, x, 0);
         if (v > max)
         {
             max = v;
@@ -607,7 +539,7 @@ void copy_mat(Matrix *source, Matrix *target)
 
         for (size_t x = 0; x < source->cols; x++)
         {
-            set_element_at(target, x, y, get_element_at(source, x, y));
+            SET_ELEMENT_AT(target, x, y, GET_ELEMENT_AT(source, x, y));
         }
     }
 }
@@ -680,7 +612,7 @@ void random_fill_mat(Matrix *m)
 
         for (size_t x = 0; x < m->cols; x++)
         {
-            set_element_at(m, x, y, get_random_number());
+            SET_ELEMENT_AT(m, x, y, get_random_number());
         }
     }
 }

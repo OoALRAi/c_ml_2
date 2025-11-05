@@ -41,7 +41,7 @@ void one_hot_label(int label, Matrix *result)
 {
     for (int i = 0; i < result->cols; i++)
     {
-        set_element_at(result, i, 0, i == label);
+        SET_ELEMENT_AT(result, i, 0, i == label);
     }
 }
 int label_from_one_hot(Matrix *one_hot_label)
@@ -49,7 +49,7 @@ int label_from_one_hot(Matrix *one_hot_label)
     int label = -1;
     for (int i = 0; i < one_hot_label->cols; i++)
     {
-        if (get_element_at(one_hot_label, i, 0) == 1)
+        if (GET_ELEMENT_AT(one_hot_label, i, 0) == 1)
         {
             label = i;
         }
@@ -84,7 +84,7 @@ void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
         double value = atof(current_char);
         value /= 256;
 
-        set_element_at(data, i, 0, value);
+        SET_ELEMENT_AT(data, i, 0, value);
         current_char = skip_value(current_char);
         if (current_char == NULL)
             break;
