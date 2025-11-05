@@ -1,17 +1,20 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#define GET_ELEMENT_AT(m, x, y) (m->data[y * (m->cols) + x])
-#define SET_ELEMENT_AT(m, x, y, v) (m->data[y * (m->cols) + x] = v)
+#define GET_ELEMENT_AT(m, x, y) (m->data[y * (m->stride) + x])
+#define SET_ELEMENT_AT(m, x, y, v) (m->data[y * (m->stride) + x] = v)
 
 typedef struct Matrix
 {
     int rows;
     int cols;
+    int stride;
+    int owner;
     double *data;
 } Matrix;
 
 Matrix *new_mat(int rows, int cols);
+Matrix *new_view(int rows, int cols, int stride);
 Matrix *new_mat_like(Matrix *m);
 Matrix *new_copy_of(Matrix *m);
 void free_mat(Matrix *m);

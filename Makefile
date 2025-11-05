@@ -7,6 +7,9 @@ all: main.o matrix.o nn.o mnist.o statistic_utils.o
 test_conv: nn.o test_conv.o matrix.o
 	$(CC) $(FLAGS) test_conv.o nn.o matrix.o -o test_conv -lm
 
+test_slice: test_slice.o matrix.o
+	$(CC) $(FLAGS) test_slice.o matrix.o -o test_slice -lm
+
 
 test_mem_leak: test_mem_leak.o nn.o matrix.o mnist.o
 	$(CC) $(FLAGS) test_mem_leak.o nn.o matrix.o mnist.o -o test_mem_leak -lm

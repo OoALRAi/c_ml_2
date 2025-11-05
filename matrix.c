@@ -9,6 +9,8 @@ Matrix *new_mat(int rows, int cols)
     Matrix *m = malloc(sizeof(Matrix));
     m->rows = rows;
     m->cols = cols;
+    m->stride = cols;
+    m->owner = 1;
     m->data = calloc(rows * cols, sizeof(double));
     if (!m->data)
     {
@@ -19,11 +21,21 @@ Matrix *new_mat(int rows, int cols)
     return m;
 }
 
+Matrix *new_view(int rows, int cols, int stride)
+{
+    Matrix *m = malloc(sizeof(Matrix));
+    m->rows = rows;
+    m->cols = cols;
+    m->stride = stride;
+    m->data = NULL;
+    return m;
+}
+
 Matrix *new_mat_like(Matrix *m)
 {
-    if (!m)
+    if (m == NULL)
     {
-        fprintf(stderr, "[new_mat_like]: m is null\n");
+        fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
         exit(0);
     }
     return new_mat(m->rows, m->cols);
@@ -42,7 +54,7 @@ void free_mat(Matrix *m)
     {
         return;
     }
-    if (m->data != NULL)
+    if (m->owner == 1)
     {
         free(m->data);
     }
@@ -52,9 +64,7 @@ void free_mat(Matrix *m)
 
 Matrix *zeros(int rows, int cols)
 {
-    Matrix *r = new_mat(rows, cols);
-    fill_mat_with(0, r);
-    return r;
+    return new_mat(rows, cols);
 }
 
 Matrix *ones(int rows, int cols)
@@ -71,6 +81,7 @@ int check_sizes(Matrix *m1, Matrix *m2)
     */
     return m1 != NULL && m2 != NULL && m1->cols == m2->cols && m1->rows == m2->rows;
 }
+
 int check_sizes_for_dot(Matrix *m1, Matrix *m2)
 {
     /*
@@ -295,20 +306,25 @@ void transpose_mat_inplace(Matrix *m)
         fprintf(stderr, "m is not quadratic, inplace transpose is only for quadratic matrix possible\n");
         exit(-1);
     }
+    if (m->owner == 0)
+    {
+        fprintf(stderr, "[%s] cannot transpose a view\n", __FUNCTION__);
+        exit(-1);
+    }
     int x_start = 0;
     for (int y = 0; y < m->rows; y++)
     {
         for (int x = x_start; x < m->cols; x++)
         {
-            double temp = m->data[y * m->cols + x];
-            m->data[y * m->cols + x] = m->data[x * m->cols + y];
-            m->data[x * m->cols + y] = temp;
+            // double temp = m->data[y * m->cols + x];
+            double temp = GET_ELEMENT_AT(m, x, y);
+            // m->data[y * m->cols + x] = m->data[x * m->cols + y];
+            SET_ELEMENT_AT(m, x, y, GET_ELEMENT_AT(m, y, x));
+            // m->data[x * m->cols + y] = temp;
+            SET_ELEMENT_AT(m, y, x, temp);
         }
         x_start++;
     }
-    int temp_cols = m->cols;
-    m->cols = m->rows;
-    m->rows = temp_cols;
 }
 
 void scale_mat_inplace(Matrix *m, double scaler)
@@ -330,8 +346,8 @@ void scale_mat_inplace(Matrix *m, double scaler)
 
 double scalar_product(Matrix *a, Matrix *b)
 {
-    int checked_sizes = check_sizes(a, b);
-    if (check_sizes == 0)
+    int check = check_sizes(a, b);
+    if (check == 0)
     {
         fprintf(stderr, "[%s] cannot apply scalar product to matrices of different sizes\n", __FUNCTION__);
         exit(-1);
@@ -354,7 +370,7 @@ Matrix *slice_mat(Matrix *m, int w_start, int w_end, int h_start, int h_end)
         fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
         exit(-1);
     }
-    if (h_start < 0 || h_end >= m->rows)
+    if (h_start < 0 || h_end > m->rows)
     {
 
         fprintf(stderr, "[%s] cannot slice outside the height range (%dx%d)\n",
@@ -363,7 +379,7 @@ Matrix *slice_mat(Matrix *m, int w_start, int w_end, int h_start, int h_end)
                 m->rows);
         exit(-1);
     }
-    if (w_start < 0 || w_end >= m->cols)
+    if (w_start < 0 || w_end > m->cols)
     {
 
         fprintf(stderr, "[%s] cannot slice outside the width range (%dx%d)\n",
@@ -372,6 +388,9 @@ Matrix *slice_mat(Matrix *m, int w_start, int w_end, int h_start, int h_end)
                 m->cols);
         exit(-1);
     }
+    Matrix *sliced = new_view(h_end - h_start, w_end - w_start, m->stride);
+    sliced->data = m->data + (h_start * m->stride + w_start);
+    return sliced;
 }
 
 Matrix *add_mat(Matrix *a, Matrix *b)
@@ -541,7 +560,7 @@ void print_mat(Matrix *m)
 {
     if (m == NULL)
     {
-        fprintf(stderr, "matrix is null\n");
+        fprintf(stderr, "[%s] matrix is null\n", __FUNCTION__);
         exit(-1);
     }
     if (m->data == NULL)
@@ -550,13 +569,21 @@ void print_mat(Matrix *m)
         exit(-1);
     }
 
-    printf("(%d x %d)\n", m->rows, m->cols);
+    if (m->owner == 1)
+    {
+        printf("mat: (%d x %d)\n", m->rows, m->cols);
+    }
+    else
+    {
+        printf("view: (%d x %d)\n", m->rows, m->cols);
+    }
+    printf("stride = %d\n", m->stride);
     printf("[\n");
     for (int y = 0; y < m->rows; y++)
     {
         for (int x = 0; x < m->cols; x++)
         {
-            printf("\t%.2f ", m->data[y * m->cols + x]);
+            printf("\t%.2f ", GET_ELEMENT_AT(m, x, y));
         }
         printf("\n");
     }
