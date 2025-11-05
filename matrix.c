@@ -328,6 +328,52 @@ void scale_mat_inplace(Matrix *m, double scaler)
     }
 }
 
+double scalar_product(Matrix *a, Matrix *b)
+{
+    int checked_sizes = check_sizes(a, b);
+    if (check_sizes == 0)
+    {
+        fprintf(stderr, "[%s] cannot apply scalar product to matrices of different sizes\n", __FUNCTION__);
+        exit(-1);
+    }
+    double sum = 0;
+    for (int y = 0; y < a->rows; y++)
+    {
+        for (int x = 0; x < a->cols; x++)
+        {
+            sum += GET_ELEMENT_AT(a, x, y) * GET_ELEMENT_AT(b, x, y);
+        }
+    }
+    return sum;
+}
+
+Matrix *slice_mat(Matrix *m, int w_start, int w_end, int h_start, int h_end)
+{
+    if (m == NULL)
+    {
+        fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
+        exit(-1);
+    }
+    if (h_start < 0 || h_end >= m->rows)
+    {
+
+        fprintf(stderr, "[%s] cannot slice outside the height range (%dx%d)\n",
+                __FUNCTION__,
+                0,
+                m->rows);
+        exit(-1);
+    }
+    if (w_start < 0 || w_end >= m->cols)
+    {
+
+        fprintf(stderr, "[%s] cannot slice outside the width range (%dx%d)\n",
+                __FUNCTION__,
+                0,
+                m->cols);
+        exit(-1);
+    }
+}
+
 Matrix *add_mat(Matrix *a, Matrix *b)
 {
     Matrix *r = new_mat(a->rows, a->cols);

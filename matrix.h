@@ -39,6 +39,9 @@ void scale_mat_inplace(Matrix *m, double scaler);
 void transpose_mat_inplace(Matrix *m);
 double max(Matrix *m);
 int argmax(Matrix *m);
+
+double scalar_product(Matrix *a, Matrix *b);
+Matrix *slice_mat(Matrix *m, int w_start, int w_end, int h_start, int h_end);
 // ==== no memory allocation in these operations ====
 
 // ==== memory allocation ====
