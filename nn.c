@@ -282,6 +282,23 @@ void free_dense(Dense *d)
     free(d);
 }
 
+Conv2d *create_conv2d(int input_channels, int output_channels, int kernel_size, int stride, int padding)
+{
+    Conv2d *conv = malloc(sizeof(Conv2d));
+    conv->input_channels = input_channels;
+    conv->output_channels = output_channels;
+    conv->kernel_size = kernel_size;
+    conv->stride = stride;
+    conv->padding = padding;
+
+    conv->kernel_weights = malloc(input_channels * output_channels * sizeof(Matrix));
+    for (int i = 0; i < input_channels * output_channels; i++)
+    {
+        conv->kernel_weights[i] = new_mat(kernel_size, kernel_size);
+    }
+    return conv;
+}
+
 Loss *create_loss(Matrix *(*error_function)(Matrix *, Matrix *), Matrix *(*grad_error_function)(Matrix *, Matrix *))
 {
     Loss *loss = malloc(sizeof(Loss));
@@ -291,6 +308,28 @@ Loss *create_loss(Matrix *(*error_function)(Matrix *, Matrix *), Matrix *(*grad_
     loss->y_hat = NULL;
     loss->error_values = NULL;
     return loss;
+}
+
+void print_conv2d(Conv2d *c)
+{
+    printf("conv2d: \n");
+    printf("input_channels:\t\t%d\n", c->input_channels);
+    printf("output_channels:\t%d\n", c->output_channels);
+    printf("kernel size:\t\t%d\n", c->kernel_size);
+    printf("stride:\t\t\t%d\n", c->stride);
+    printf("padding:\t\t%d\n", c->padding);
+
+    printf("\nnum of output images:\t%d\n", c->input_channels * c->output_channels);
+
+    for (int y = 0; y < c->input_channels; y++)
+    {
+        for (int x = 0; x < c->output_channels; x++)
+        {
+
+            printf("channel: %d, kernel: %d\n", y, x);
+            print_mat(c->kernel_weights[y * c->output_channels + x]);
+        }
+    }
 }
 
 void free_loss(Loss *l)

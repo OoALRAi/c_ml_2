@@ -1,2 +1,7 @@
 /data
 /.vscode
+*
+!*.c
+!*.h
+!.gitignore
+!/assets

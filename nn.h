@@ -36,10 +36,40 @@ typedef struct
     Matrix *(*grad_error_function)(Matrix *, Matrix *);
 } Loss;
 
+typedef struct
+{
+    // no bias use
+    int kernel_size;
+    int padding;
+    int stride;
+    int input_channels;
+    int output_channels;
+
+    Matrix **input;           // 2D image with number of input_channels
+    Matrix **pre_pool_output; // 2D outputs with number of output_channels
+
+    // first assume there are not pooling functions used
+    // Matrix *post_pool_output;
+
+    Matrix **kernel_weights; // num of kernels = input_channels x output_channels
+    /*
+    for rgb image there are 3 input channels
+    if output_channels = 5 then for each of the 3 rgb channels there are 5 different kernels
+    i.e. 3x5 = 15 kernels
+    */
+
+    Matrix *dw;
+    Matrix *dx; // next gradient to previous layers
+
+} Conv2d;
+
 Dense *create_dense(int in, int out, void (*activation)(Matrix *, Matrix *), void(grad_activation)(Matrix *, Matrix *, Matrix *));
+Conv2d *create_conv2d(int input_channels, int output_channels, int kernel_size, int stride, int padding);
 Loss *create_loss(Matrix *(*error_function)(Matrix *, Matrix *), Matrix *(*grad_error_function)(Matrix *, Matrix *));
 void print_dense(Dense *d);
+void print_conv2d(Conv2d *c);
 void free_dense(Dense *d);
+void free_conv2d(Conv2d *c);
 void free_loss(Loss *l);
 
 void relu(Matrix *input, Matrix *result);
