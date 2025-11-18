@@ -1,10 +1,12 @@
 #include "matrix.h"
 int main(void)
 {
-    Matrix *m = new_mat(4, 4);
 
+    int shape[3] = {4, 4, 4};
+    Matrix *m = new_mat(shape, 3);
     stepwise_fill_mat(10, 2, m);
-    Matrix *view = slice_mat(m, 1, 2, 0, 4);
+    int slice_range[6] = {1, 3, 1, 3, 1, 3};
+    Matrix *view = slice_mat(m, slice_range, 6);
     print_mat(m);
     print_mat(view);
 

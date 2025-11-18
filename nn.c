@@ -391,7 +391,7 @@ void backward(Dense *d, Matrix *next_grad, double lr)
     Matrix *dydw = transpose_mat(d->input);
     if (d->dw == NULL)
     {
-        Matrix *dw = mul_mat(dydw, d->dz);
+        Matrix *dw = dot(dydw, d->dz);
         scale_mat_to(dw, lr, dw);
         d->dw = dw;
     }
@@ -418,7 +418,7 @@ void backward(Dense *d, Matrix *next_grad, double lr)
     }
 
     Matrix *dydx = transpose_mat(d->weights);
-    Matrix *dx = mul_mat(d->dz, dydx);
+    Matrix *dx = dot(d->dz, dydx);
     if (d->dx == NULL)
     {
         d->dx = dx;

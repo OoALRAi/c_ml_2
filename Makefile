@@ -3,6 +3,8 @@ FLAGS=-Wall
 
 all: main.o matrix.o nn.o mnist.o statistic_utils.o
 	$(CC) $(FLAGS) statistic_utils.o nn.o mnist.o matrix.o main.o -o main -lm
+test_math: test_math.o matrix.o
+	$(CC) $(FLAGS) test_math.o matrix.o -o test_math -lm
 
 test_conv: nn.o test_conv.o matrix.o
 	$(CC) $(FLAGS) test_conv.o nn.o matrix.o -o test_conv -lm
@@ -23,4 +25,4 @@ test_mnist: test_mnist.o mnist.o matrix.o
 test_statistic_utils: test_statistic_utils.o matrix.o statistic_utils.o
 	$(CC) $(FLAGS) test_statistic_utils.o statistic_utils.o matrix.o -o test_statistic_utils -lm
 clean:
-	rm *.o main main2 main_str test_mem_leak test_statistic_utils test_conv
+	rm *.o main main2 main_str test_mem_leak test_statistic_utils test_conv test_math test_slice

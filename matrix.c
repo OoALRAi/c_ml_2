@@ -3,49 +3,93 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <assert.h>
 
-Matrix *new_mat(int rows, int cols)
+Matrix *new_mat(int *shape, int ndims)
 {
     Matrix *m = malloc(sizeof(Matrix));
-    m->rows = rows;
-    m->cols = cols;
-    m->stride = cols;
+
     m->owner = 1;
-    m->data = calloc(rows * cols, sizeof(double));
+    m->ndims = ndims;
+    m->shape = shape;
+
+    int size = 1;
+    for (int i = 0; i < ndims; i++)
+    {
+        size *= shape[i];
+    }
+    m->size = size;
+    m->data = calloc(m->size, sizeof(double));
     if (!m->data)
     {
         free(m->data);
         free(m);
         return NULL;
     }
+
+    // === compute stride array ===
+    int *stride = malloc(ndims * sizeof(int));
+
+    // stride of last dim is always 1
+    // considering data array contains only double values
+    stride[ndims - 1] = 1;
+    for (int i = ndims - 1; i > 0; i--)
+    {
+        stride[i - 1] = stride[i] * shape[i];
+    }
+    m->stride = stride;
+
+    // === compute stride array ===
     return m;
 }
 
-Matrix *new_view(int rows, int cols, int stride)
+Matrix *new_view(int *shape, int ndims, int *stride)
 {
     Matrix *m = malloc(sizeof(Matrix));
-    m->rows = rows;
-    m->cols = cols;
+    m->ndims = ndims;
+    m->shape = shape;
     m->stride = stride;
+    m->owner = 0;
     m->data = NULL;
     return m;
 }
 
 Matrix *new_mat_like(Matrix *m)
 {
-    if (m == NULL)
+    assert(m != NULL);
+    assert(m->data != NULL);
+
+    int ndims = m->ndims;
+    int *new_mat_shape = malloc(m->ndims * sizeof(int));
+    for (int i = 0; i < ndims; i++)
     {
-        fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
-        exit(0);
+        new_mat_shape[i] = m->shape[i];
     }
-    return new_mat(m->rows, m->cols);
+    Matrix *new_m = new_mat(new_mat_shape, ndims);
+    return new_m;
 }
 
 Matrix *new_copy_of(Matrix *m)
 {
+    assert(m != NULL);
+    assert(m->data != NULL);
     Matrix *cp_mat = new_mat_like(m);
     copy_mat(m, cp_mat);
     return cp_mat;
+}
+
+Matrix *zeros(int *shape, int ndims)
+{
+    Matrix *m = new_mat(shape, ndims);
+    fill_mat_with(0, m);
+    return m;
+}
+
+Matrix *ones(int *shape, int ndims)
+{
+    Matrix *m = new_mat(shape, ndims);
+    fill_mat_with(1, m);
+    return m;
 }
 
 void free_mat(Matrix *m)
@@ -62,459 +106,637 @@ void free_mat(Matrix *m)
     m = NULL;
 }
 
-Matrix *zeros(int rows, int cols)
+int equals(Matrix *m1, Matrix *m2)
 {
-    return new_mat(rows, cols);
+    // === ERROR CHECK ===
+    assert(m1 != NULL);
+    assert(m1->data != NULL);
+    assert(m2 != NULL);
+    assert(m2->data != NULL);
+    // === ERROR CHECK ===
+
+    if (m1->ndims != m2->ndims)
+    {
+        return 0;
+    }
+    for (int dim = 0; dim < m1->ndims; ++dim)
+    {
+        if (m1->shape[dim] != m2->shape[dim])
+        {
+            return 0;
+        }
+    }
+
+    int ndims = m1->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m1->size; count++)
+    {
+        // Compute current offsets using stride and index counter
+        int offset_m1 = 0, offset_m2 = 0;
+        for (int d = 0; d < ndims; d++)
+        {
+            offset_m1 += idx[d] * m1->stride[d];
+            offset_m2 += idx[d] * m2->stride[d];
+        }
+
+        double v1 = m1->data[offset_m1];
+        double v2 = m2->data[offset_m2];
+        if (v1 != v2)
+            return 0;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m1->shape[d])
+                break;
+            idx[d] = 0;
+        }
+    }
+    free(idx);
+    return 1;
 }
 
-Matrix *ones(int rows, int cols)
+int check_shapes_elementweise_op(Matrix *a, Matrix *b)
 {
-    Matrix *r = new_mat(rows, cols);
-    fill_mat_with(1, r);
-    return r;
-}
-int check_sizes(Matrix *m1, Matrix *m2)
-{
-    /*
-    check if given matrices are of same sizes
-    return: 1 if same sizes, 0 if different sizes
-    */
-    return m1 != NULL && m2 != NULL && m1->cols == m2->cols && m1->rows == m2->rows;
+    if (a == NULL)
+    {
+        fprintf(stderr, "[%s] matrix a is null\n", __FUNCTION__);
+        return 0;
+    }
+    if (b == NULL)
+    {
+        fprintf(stderr, "[%s] matrix a is null\n", __FUNCTION__);
+        return 0;
+    }
+    int equal_sizes = 1;
+    if (a->ndims != b->ndims)
+    {
+        equal_sizes = 0;
+    }
+    else
+    {
+        for (int dim = 0; dim < a->ndims; dim++)
+        {
+            if (a->shape[dim] != b->shape[dim])
+            {
+                equal_sizes = 0;
+                break;
+            }
+        }
+    }
+
+    if (equal_sizes == 0)
+    {
+
+        fprintf(stderr, "[%s] shapes mismatch: shape_1 = [", __FUNCTION__);
+        for (int i = 0; i < a->ndims; i++)
+        {
+            if (i != 0)
+            {
+                fprintf(stderr, ",");
+            }
+            fprintf(stderr, "%d", a->shape[i]);
+        }
+        fprintf(stderr, "], shape_2 = [");
+        for (int i = 0; i < b->ndims; i++)
+        {
+            if (i != 0)
+            {
+                fprintf(stderr, ",");
+            }
+            fprintf(stderr, "%d", b->shape[i]);
+        }
+        fprintf(stderr, "]\n");
+    }
+    return equal_sizes;
 }
 
-int check_sizes_for_dot(Matrix *m1, Matrix *m2)
+int check_shapes_for_mul_mat(Matrix *m1, Matrix *m2, Matrix *result)
 {
     /*
     check if sizes of given matrices are appropriate for dot product;
     return: 1 if appropriate, else 0
+
+    dot product is only applicable for ndim = 2 matrices like 3x3 matrices
     */
-    return m1 != NULL && m2 != NULL && m1->cols == m2->rows;
+    if (m1 == NULL || m2 == NULL || result == NULL)
+    {
+        return 0;
+    }
+
+    // only 2D
+    if (m1->ndims != 2 || m2->ndims != 2 || result->ndims == 2)
+    {
+        return 0;
+    }
+    // === CHECK EQUAL INNER DIMS
+    if (m1->shape[1] == m2->shape[0])
+    {
+        return 0;
+    }
+    if (result->shape[0] != m1->shape[0] || result->shape[1] != m2->shape[1])
+    {
+        return 0;
+    }
+    return 1;
 }
 
 void add_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
-    int equal_sizes = check_sizes(a, b);
-    if (equal_sizes == 0)
+    // === ERROR CHECK ===
+    int eq = check_shapes_elementweise_op(a, b);
+    int eq_result = check_shapes_elementweise_op(a, result);
+    if (eq == 0 || eq_result == 0)
     {
-        fprintf(stderr, "[%s] matrices have different sizes or are null\n", __FUNCTION__);
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
         exit(-1);
     }
+    // === ERROR CHECK ===
 
-    for (int y = 0; y < a->rows; y++)
+    // === APPLY OPERATION ===
+    int ndims = a->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < a->size; count++)
     {
-        for (int x = 0; x < a->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_b = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) + GET_ELEMENT_AT(b, x, y));
+            offset_a += idx[d] * a->stride[d];
+            offset_b += idx[d] * b->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+
+        result->data[offset_c] = a->data[offset_a] + b->data[offset_b];
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < a->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
 void sub_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
-    int equal_sizes = check_sizes(a, b);
-    if (equal_sizes == 0)
+    // === ERROR CHECK ===
+    int eq = check_shapes_elementweise_op(a, b);
+    int eq_result = check_shapes_elementweise_op(a, result);
+    if (eq == 0 || eq_result == 0)
     {
-        fprintf(stderr, "[%s] matrices have different sizes or are null\n", __FUNCTION__);
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
         exit(-1);
     }
+    // === ERROR CHECK ===
 
-    for (int y = 0; y < a->rows; y++)
+    // === APPLY OPERATION ===
+    int ndims = a->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < a->size; count++)
     {
-        for (int x = 0; x < a->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_b = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) - GET_ELEMENT_AT(b, x, y));
+            offset_a += idx[d] * a->stride[d];
+            offset_b += idx[d] * b->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+
+        // subtract values
+        result->data[offset_c] = a->data[offset_a] - b->data[offset_b];
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < a->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
-void dot_to(Matrix *a, Matrix *b, Matrix *result)
-
+void mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
-    int check_results = check_sizes_for_dot(a, b);
+    // === CHECK ERROR ===
+    int check_results = check_shapes_for_mul_mat(a, b, result);
     if (check_results == 0)
     {
         fprintf(stderr, "[%s] dot product not possible\n", __FUNCTION__);
         exit(-1);
     }
-    if (result == NULL)
-    {
-        fprintf(stderr, "[%s] matrix result is null\n", __FUNCTION__);
-        exit(-1);
-    }
-    if (result->rows != a->rows || result->cols != b->cols)
-    {
+    // === CHECK ERROR ===
 
-        fprintf(stderr, "[%s] dim of result matrix is invalid, expected dim result: (%d,%d), actual dim result: (%d,%d)\n",
-                __FUNCTION__,
-                a->rows, b->cols, result->rows, result->cols);
-        exit(-1);
-    }
-    for (int y = 0; y < a->rows; y++)
+    for (int y = 0; y < a->shape[0]; y++)
     {
-        for (int x = 0; x < b->cols; x++)
+        for (int x = 0; x < a->shape[1]; x++)
         {
             double acc = 0;
-            for (int i = 0; i < a->cols; i++)
+            for (int i = 0; i < a->shape[1]; i++)
             {
-                acc += GET_ELEMENT_AT(a, i, y) * GET_ELEMENT_AT(b, x, i);
+                double a_value = a->data[y * a->stride[0] + i];
+                double b_value = b->data[i * b->stride[0] + x];
+                double r_value = a_value * b_value;
+                acc += r_value;
             }
-            SET_ELEMENT_AT(result, x, y, acc);
+            result->data[y * result->stride[0] + x] = acc;
         }
     }
 }
 
 void e_div_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
-    if (a == NULL)
+    // === ERROR CHECK ===
+    int eq = check_shapes_elementweise_op(a, b);
+    int eq_result = check_shapes_elementweise_op(a, result);
+    if (eq == 0 || eq_result == 0)
     {
-        fprintf(stderr, "matrix a is null\n");
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
         exit(-1);
     }
-    if (b == NULL)
+    // === ERROR CHECK ===
+
+    // === APPLY OPERATION ===
+    int ndims = a->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < a->size; count++)
     {
-        fprintf(stderr, "matrix b is null\n");
-        exit(-1);
-    }
-    if (result == NULL)
-    {
-        fprintf(stderr, "result matrix is null\n");
-        exit(-1);
-    }
-    if (a->cols != b->cols || a->rows != b->rows)
-    {
-        fprintf(stderr, "input matrices a and b have different dimensions\n");
-        exit(-1);
-    }
-    if (a->cols != result->cols || a->rows != result->rows)
-    {
-        fprintf(stderr, "incorrect output dimensions\n");
-        exit(-1);
-    }
-    for (int y = 0; y < a->rows; y++)
-    {
-        for (int x = 0; x < a->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_b = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) / GET_ELEMENT_AT(b, x, y));
+            offset_a += idx[d] * a->stride[d];
+            offset_b += idx[d] * b->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+
+        assert(b->data[offset_b] != 0); // division by zero
+        result->data[offset_c] = a->data[offset_a] / b->data[offset_b];
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < a->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
 void e_mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
+    // === ERROR CHECK ===
+    int eq = check_shapes_elementweise_op(a, b);
+    int eq_result = check_shapes_elementweise_op(a, result);
+    if (eq == 0 || eq_result == 0)
     {
-        if (a == NULL)
-        {
-            fprintf(stderr, "matrix a is null\n");
-            exit(-1);
-        }
-        if (b == NULL)
-        {
-            fprintf(stderr, "matrix b is null\n");
-            exit(-1);
-        }
-        if (result == NULL)
-        {
-            fprintf(stderr, "result matrix is null\n");
-            exit(-1);
-        }
-        if (a->cols != b->cols || a->rows != b->rows)
-        {
-            fprintf(stderr, "input matrices a and b have different dimensions\n");
-            exit(-1);
-        }
-        if (a->cols != result->cols || a->rows != result->rows)
-        {
-            fprintf(stderr, "incorrect output dimensions\n");
-            exit(-1);
-        }
-        for (int y = 0; y < a->rows; y++)
-        {
-            for (int x = 0; x < a->cols; x++)
-            {
-                SET_ELEMENT_AT(result, x, y, GET_ELEMENT_AT(a, x, y) * GET_ELEMENT_AT(b, x, y));
-            }
-        }
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
+        exit(-1);
     }
-}
+    // === ERROR CHECK ===
 
-void transpose_mat_to(Matrix *m, Matrix *result)
-{
-    if (m == NULL)
+    // === APPLY OPERATION ===
+    int ndims = a->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < a->size; count++)
     {
-        fprintf(stderr, "input matrix is null\n");
-        exit(-1);
-    }
-    if (result == NULL)
-    {
-        fprintf(stderr, "output matrix is null\n");
-        exit(-1);
-    }
-    if (m->cols != result->rows || m->rows != result->cols)
-    {
-        fprintf(stderr, "incorrect output dimenstions, expexted dim: (%dx%d), actual dim: (%dx%d)\n",
-                m->cols, m->rows, result->rows, result->cols);
-        exit(-1);
-    }
-    for (size_t y = 0; y < m->rows; y++)
-    {
-        for (size_t x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_b = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(result, y, x, GET_ELEMENT_AT(m, x, y));
+            offset_a += idx[d] * a->stride[d];
+            offset_b += idx[d] * b->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+        result->data[offset_c] = a->data[offset_a] * b->data[offset_b];
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < a->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
 void e_pow_mat_to(Matrix *m, Matrix *result, double pow_value)
 {
-    if (m == NULL)
+    // === ERROR CHECK ===
+    int eq_result = check_shapes_elementweise_op(m, result);
+    if (eq_result == 0)
     {
-        fprintf(stderr, "m is null\n");
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
         exit(-1);
     }
-    if (result == NULL)
-    {
-        fprintf(stderr, "result matrix is null\n");
-        exit(-1);
-    }
-    if (m->rows != result->rows || m->cols != result->cols)
-    {
-        fprintf(stderr, "dimensions of input and result matrices do\'t match\n");
-        exit(-1);
-    }
+    // === ERROR CHECK ===
 
-    for (size_t y = 0; y < m->rows; y++)
+    // === APPLY OPERATION ===
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        for (size_t x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_m = 0, offset_r = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(m, x, y);
-            SET_ELEMENT_AT(
-                result, x, y,
-                pow(value, pow_value));
+            offset_m += idx[d] * m->stride[d];
+            offset_r += idx[d] * result->stride[d];
+        }
+        // subtract values
+        double m_value = m->data[offset_m];
+        result->data[offset_r] = pow(m_value, pow_value);
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
-void transpose_mat_inplace(Matrix *m)
-{
-    if (m == NULL)
-    {
-        fprintf(stderr, "matrix is null\n");
-        exit(-1);
-    }
-    if (m->cols != m->rows)
-    {
-        fprintf(stderr, "m is not quadratic, inplace transpose is only for quadratic matrix possible\n");
-        exit(-1);
-    }
-    if (m->owner == 0)
-    {
-        fprintf(stderr, "[%s] cannot transpose a view\n", __FUNCTION__);
-        exit(-1);
-    }
-    int x_start = 0;
-    for (int y = 0; y < m->rows; y++)
-    {
-        for (int x = x_start; x < m->cols; x++)
-        {
-            // double temp = m->data[y * m->cols + x];
-            double temp = GET_ELEMENT_AT(m, x, y);
-            // m->data[y * m->cols + x] = m->data[x * m->cols + y];
-            SET_ELEMENT_AT(m, x, y, GET_ELEMENT_AT(m, y, x));
-            // m->data[x * m->cols + y] = temp;
-            SET_ELEMENT_AT(m, y, x, temp);
-        }
-        x_start++;
-    }
-}
-
-void scale_mat_inplace(Matrix *m, double scaler)
+void transpose_mat(Matrix *m, int dim1, int dim2)
 {
     if (m == NULL)
     {
         fprintf(stderr, "input matrix is null\n");
         exit(-1);
     }
-    for (size_t y = 0; y < m->rows; y++)
+    if (dim1 < 0 || dim1 >= m->ndims)
     {
-
-        for (size_t x = 0; x < m->cols; x++)
-        {
-            SET_ELEMENT_AT(m, x, y, GET_ELEMENT_AT(m, x, y) * scaler);
-        }
-    }
-}
-
-double scalar_product(Matrix *a, Matrix *b)
-{
-    int check = check_sizes(a, b);
-    if (check == 0)
-    {
-        fprintf(stderr, "[%s] cannot apply scalar product to matrices of different sizes\n", __FUNCTION__);
+        fprintf(stderr, "[%s] dim1 = %d out of range\n", __FUNCTION__, dim1);
         exit(-1);
     }
-    double sum = 0;
-    for (int y = 0; y < a->rows; y++)
+    if (dim1 < 0 || dim1 >= m->ndims)
     {
-        for (int x = 0; x < a->cols; x++)
-        {
-            sum += GET_ELEMENT_AT(a, x, y) * GET_ELEMENT_AT(b, x, y);
-        }
+        fprintf(stderr, "[%s] dim2 = %d out of range\n", __FUNCTION__, dim2);
+        exit(-1);
     }
-    return sum;
+    // swap shape
+    int temp_value = m->shape[dim1];
+    m->shape[dim1] = m->shape[dim2];
+    m->shape[dim2] = m->shape[temp_value];
+
+    // swap stride
+    temp_value = m->stride[dim1];
+    m->stride[dim1] = m->stride[dim2];
+    m->stride[dim2] = m->stride[temp_value];
 }
 
-Matrix *slice_mat(Matrix *m, int w_start, int w_end, int h_start, int h_end)
+void scale_mat_inplace(Matrix *m, double scaler)
 {
+    // === ERROR CHECK ===
     if (m == NULL)
     {
         fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
         exit(-1);
     }
-    if (h_start < 0 || h_end > m->rows)
-    {
+    // === ERROR CHECK ===
 
-        fprintf(stderr, "[%s] cannot slice outside the height range (%dx%d)\n",
-                __FUNCTION__,
-                0,
-                m->rows);
+    // === APPLY OPERATION ===
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
+    {
+        // Compute current offsets using stride and index counter
+        int offset_m = 0;
+        for (int d = 0; d < ndims; d++)
+        {
+            offset_m += idx[d] * m->stride[d];
+        }
+        // subtract values
+        double m_value = m->data[offset_m];
+        m->data[offset_m] = m_value * scaler;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
+        }
+    }
+    free(idx);
+    // === APPLY OPERATION ===
+}
+
+double dot_mat(Matrix *a, Matrix *b)
+{
+    // === ERROR CHECK ===
+    int eq = check_shapes_elementweise_op(a, b);
+    if (eq == 0)
+    {
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
         exit(-1);
     }
-    if (w_start < 0 || w_end > m->cols)
+    if (a->ndims != 1 || b->ndims != 1)
     {
-
-        fprintf(stderr, "[%s] cannot slice outside the width range (%dx%d)\n",
-                __FUNCTION__,
-                0,
-                m->cols);
+        fprintf(stderr, "[%s] dot product is only applicable for 1D matrices\n", __FUNCTION__);
         exit(-1);
     }
-    Matrix *sliced = new_view(h_end - h_start, w_end - w_start, m->stride);
-    sliced->data = m->data + (h_start * m->stride + w_start);
+    // === ERROR CHECK ===
+
+    // === APPLY OPERATION ===
+    int ndims = a->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+    double result = 0;
+
+    for (int count = 0; count < a->size; count++)
+    {
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_b = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
+        {
+            offset_a += idx[d] * a->stride[d];
+            offset_b += idx[d] * b->stride[d];
+        }
+
+        result += a->data[offset_a] * b->data[offset_b];
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < a->shape[d])
+                break;
+            idx[d] = 0;
+        }
+    }
+    free(idx);
+    // === APPLY OPERATION ===
+    return result;
+}
+
+Matrix *slice_mat(Matrix *m, int *slice_range, int slice_range_size)
+{
+    // === ERROR CHECK ===
+    if (m == NULL)
+    {
+        fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
+        exit(-1);
+    }
+    if (slice_range_size != (m->ndims * 2))
+    {
+
+        fprintf(stderr, "[%s] slice range size != ndims * 2\n", __FUNCTION__);
+        exit(-1);
+    }
+    // === RANGE TO SHAPE
+    int *slice_shape = calloc(m->ndims, sizeof(int));
+    for (int dim = 0; dim < m->ndims; dim++)
+    {
+        int range_index = dim * 2;
+        int start = slice_range[range_index];
+        int end = slice_range[range_index + 1];
+        if (start < 0 || end > m->shape[dim])
+        {
+            fprintf(stderr, "range of dim %d is out of bounds\n", dim);
+            exit(-1);
+        }
+        slice_shape[dim] = end - start;
+    }
+    // === RANGE TO SHAPE
+
+    // === ERROR CHECK ===
+
+    Matrix *sliced = new_view(slice_shape, m->ndims, m->stride);
+
+    int offset = 0;
+    for (int i = 0; i < m->ndims; i++)
+    {
+        offset += slice_range[i * 2] * m->stride[i];
+    }
+
+    sliced->data = m->data + (offset);
+
     return sliced;
 }
 
 Matrix *add_mat(Matrix *a, Matrix *b)
 {
-    Matrix *r = new_mat(a->rows, a->cols);
+    Matrix *r = new_mat(a->shape, a->ndims);
     add_mat_to(a, b, r);
     return r;
 }
 
 Matrix *sub_mat(Matrix *a, Matrix *b)
 {
-    Matrix *r = new_mat(a->rows, a->cols);
+    Matrix *r = new_mat(a->shape, a->ndims);
     sub_mat_to(a, b, r);
-    return r;
-}
-
-Matrix *mul_mat(Matrix *a, Matrix *b)
-{
-    Matrix *r = new_mat(a->rows, b->cols);
-    dot_to(a, b, r);
-    return r;
-}
-
-Matrix *e_div_mat(Matrix *a, Matrix *b)
-{
-    Matrix *r = new_mat(a->rows, a->cols);
-    e_div_mat_to(a, b, r);
     return r;
 }
 
 void div_mat_by_value_to(Matrix *m, double value, Matrix *result)
 {
-    if (m == NULL)
+    int eq = check_shapes_elementweise_op(m, result);
+    if (eq == 0)
     {
-        fprintf(stderr, "m is null\n");
-        exit(-1);
-    }
-    if (result == NULL)
-    {
-        fprintf(stderr, "result matrix is null\n");
-        exit(-1);
-    }
-    if (m->rows != result->rows || m->cols != result->cols)
-    {
-        fprintf(stderr, "dimensions of input and result matrices do\'t match\n");
+        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
         exit(-1);
     }
 
-    for (size_t y = 0; y < m->rows; y++)
+    // === APPLY OPERATION ===
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        for (size_t x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_m = 0, offset_r = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(
-                result, x, y,
-                GET_ELEMENT_AT(m, x, y) / value);
+            offset_m += idx[d] * m->stride[d];
+            offset_r += idx[d] * result->stride[d];
+        }
+        double m_value = m->data[offset_m];
+        result->data[offset_r] = m_value / value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
 Matrix *div_mat_by_value(Matrix *m, double value)
 {
-    if (m == NULL)
-    {
-        fprintf(stderr, "m is null\n");
-        exit(-1);
-    }
-    Matrix *result = new_mat(m->rows, m->cols);
+    Matrix *result = new_mat(m->shape, m->ndims);
     div_mat_by_value_to(m, value, result);
     return result;
 }
 void scale_mat_to(Matrix *m, double scaler, Matrix *result)
 {
-    if (m == NULL)
+    // === ERROR CHECK ===
+    int eq = check_shapes_elementweise_op(m, result);
+    if (eq == 0)
     {
-        fprintf(stderr, "m is null\n");
+        fprintf(stderr, "[%s] m is null\n", __FUNCTION__);
         exit(-1);
     }
-    if (result == NULL)
-    {
-        fprintf(stderr, "result matrix is null\n");
-        exit(-1);
-    }
-    if (m->rows != result->rows || m->cols != result->cols)
-    {
-        fprintf(stderr, "dimensions of input and result matrices do\'t match\n");
-        exit(-1);
-    }
+    // === ERROR CHECK ===
 
-    for (size_t y = 0; y < m->rows; y++)
+    // === APPLY OPERATION ===
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        for (size_t x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_m = 0, offset_r = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(
-                result, x, y,
-                GET_ELEMENT_AT(m, x, y) * scaler);
+            offset_m += idx[d] * m->stride[d];
+            offset_r += idx[d] * result->stride[d];
+        }
+        // subtract values
+        double m_value = m->data[offset_m];
+        result->data[offset_r] = m_value * scaler;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
-}
-
-Matrix *e_mul_mat(Matrix *a, Matrix *b)
-{
-
-    Matrix *r = new_mat(a->rows, a->cols);
-    e_mul_mat_to(a, b, r);
-    return r;
-}
-
-Matrix *e_pow_mat(Matrix *m, double pow_value)
-{
-    if (m == NULL)
-    {
-        fprintf(stderr, "m is null\n");
-        exit(-1);
-    }
-    Matrix *result = new_mat(m->rows, m->cols);
-    e_pow_mat_to(m, result, pow_value);
-    return result;
-}
-
-Matrix *transpose_mat(Matrix *m)
-{
-    Matrix *r = new_mat(m->cols, m->rows);
-    transpose_mat_to(m, r);
-    return r;
+    free(idx);
+    // === APPLY OPERATION ===
 }
 
 double max(Matrix *m)
@@ -522,144 +744,272 @@ double max(Matrix *m)
     if (m == NULL)
     {
         fprintf(stderr, "matrix is null\n");
-        exit(0);
+        exit(-1);
     }
     double max = -INFINITY;
-    for (int y = 0; y < m->rows; y++)
+
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        for (int x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_m = 0, offset_r = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double v = GET_ELEMENT_AT(m, x, y);
-            max = v > max ? v : max;
+            offset_m += idx[d] * m->stride[d];
+        }
+        // subtract values
+        double value = m->data[offset_m];
+        if (value > max)
+        {
+            max = value;
+        }
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+
     return max;
 }
 int argmax(Matrix *m)
 {
     if (m == NULL)
     {
-        fprintf(stderr, "matrix is null\n");
-        exit(0);
+        fprintf(stderr, "[%s] matrix is null\n", __FUNCTION__);
+        exit(-1);
     }
+    if (m->ndims != 1 || m->ndims != 2)
+    {
+        fprintf(stderr, "[%s] argmax is only for 1D and 2D with first dim = 1 matrices applicable\n", __FUNCTION__);
+        exit(-1);
+    }
+
     double max = -INFINITY;
     int arg = -1;
-    for (int x = 0; x < m->cols; x++)
+
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        double v = GET_ELEMENT_AT(m, x, 0);
-        if (v > max)
+        // Compute current offsets using stride and index counter
+        int offset_m = 0, offset_r = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            max = v;
-            arg = x;
+            offset_m += idx[d] * m->stride[d];
+        }
+        // subtract values
+        double value = m->data[offset_m];
+        if (value > max)
+        {
+            max = value;
+            arg = count;
+        }
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
     return arg;
 }
 
-void print_mat(Matrix *m)
+void print_mat_rec(Matrix *m, int *indices, int level)
 {
-    if (m == NULL)
-    {
-        fprintf(stderr, "[%s] matrix is null\n", __FUNCTION__);
-        exit(-1);
-    }
-    if (m->data == NULL)
-    {
-        fprintf(stderr, "data of the matrix is null\n");
-        exit(-1);
-    }
 
-    if (m->owner == 1)
+    for (int i = 0; i < level; ++i)
     {
-        printf("mat: (%d x %d)\n", m->rows, m->cols);
+        printf("    ");
+    }
+    if (level == m->ndims - 1)
+    {
+        printf("[");
+        for (int i = 0; i < m->shape[level]; ++i)
+        {
+            int flat_index = 0;
+            for (int j = 0; j < m->ndims; j++)
+            {
+                flat_index += m->stride[j] * indices[j];
+            }
+            flat_index += i;
+            printf("%.2f", m->data[flat_index]);
+            if (i < m->shape[level] - 1)
+                printf(", ");
+        }
+        printf("]");
     }
     else
     {
-        printf("view: (%d x %d)\n", m->rows, m->cols);
-    }
-    printf("stride = %d\n", m->stride);
-    printf("[\n");
-    for (int y = 0; y < m->rows; y++)
-    {
-        for (int x = 0; x < m->cols; x++)
+        printf("[\n");
+        for (int i = 0; i < m->shape[level]; ++i)
         {
-            printf("\t%.2f ", GET_ELEMENT_AT(m, x, y));
+            indices[level] = i;
+            print_mat_rec(m, indices, level + 1);
+            if (i < m->shape[level] - 1)
+                printf(", \n");
         }
         printf("\n");
+        for (int i = 0; i < level; ++i)
+        {
+            printf("    ");
+        }
+        printf("]");
+    }
+    if (level == 0)
+        printf("\n");
+}
+void print_mat(Matrix *m)
+{
+    printf("shape: [");
+    for (int dim = 0; dim < m->ndims; ++dim)
+    {
+        if (dim != 0)
+        {
+            printf(", ");
+        }
+        printf("%d", m->shape[dim]);
     }
     printf("]\n");
+    printf("stride: [");
+    for (int dim = 0; dim < m->ndims; ++dim)
+    {
+        if (dim != 0)
+        {
+            printf(", ");
+        }
+        printf("%d", m->stride[dim]);
+    }
+    printf("]\n");
+    int *indices = calloc(m->ndims, sizeof(int));
+    print_mat_rec(m, indices, 0);
 }
 
 void copy_mat(Matrix *source, Matrix *target)
 {
-    if (source == NULL)
+    assert(source != NULL);
+    assert(source->data != NULL);
+    assert(target != NULL);
+    assert(target->data != NULL);
+    for (int dim = 0; dim < source->ndims; ++dim)
     {
-        fprintf(stderr, "source matrix is null\n");
-        exit(-1);
+        assert(source->shape[dim] == target->shape[dim]);
     }
-    if (target == NULL)
-    {
-        fprintf(stderr, "target matrix is null\n");
-        exit(-1);
-    }
-    if (source->rows != target->rows || source->cols != target->cols)
-    {
-        fprintf(stderr, "dimensions of source and target matrices do not match\n");
-        exit(-1);
-    }
-    for (size_t y = 0; y < source->rows; y++)
-    {
+    int ndims = source->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
 
-        for (size_t x = 0; x < source->cols; x++)
+    for (int count = 0; count < source->size; count++)
+    {
+        // Compute current offsets using stride and index counter
+        int offset_s = 0, offset_t = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(target, x, y, GET_ELEMENT_AT(source, x, y));
+            offset_s += idx[d] * source->stride[d];
+            offset_t += idx[d] * target->stride[d];
+        }
+
+        target->data[offset_t] = source->data[offset_s];
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < source->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 void fill_mat_with(double value, Matrix *m)
 {
     if (m == NULL)
     {
-        printf("cannot fill null matrix\n");
+        printf("[%s] cannot fill null matrix\n", __FUNCTION__);
         return;
     }
     else if (m->data == NULL)
     {
-        printf("cannot fill a matrix with null data\n");
+        printf("[%s] cannot fill a matrix with null data\n", __FUNCTION__);
         return;
     }
 
-    for (int y = 0; y < m->rows; y++)
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        for (int x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            m->data[y * m->cols + x] = value;
+            offset += idx[d] * m->stride[d];
+        }
+
+        m->data[offset] = value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 void stepwise_fill_mat(double start, double step, Matrix *m)
 {
     if (m == NULL)
     {
-        printf("cannot fill null matrix\n");
+        printf("[%s] cannot fill null matrix\n", __FUNCTION__);
         return;
     }
     else if (m->data == NULL)
     {
-        printf("cannot fill a matrix with null data\n");
+        printf("[%s] cannot fill a matrix with null data\n", __FUNCTION__);
         return;
     }
 
-    for (int y = 0; y < m->rows; y++)
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
     {
-        for (int x = 0; x < m->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            m->data[y * m->cols + x] = start;
-            start += step;
+            offset += idx[d] * m->stride[d];
+        }
+
+        m->data[offset] = start;
+        start += step;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 double get_random_number()
@@ -675,24 +1025,39 @@ double get_random_number()
 }
 void random_fill_mat(Matrix *m)
 {
-    if (m == NULL)
-    {
-        printf("input matrix is null\n");
-        exit(-1);
-    }
-    for (size_t y = 0; y < m->rows; y++)
-    {
+    assert(m != 0);
+    assert(m->data != 0);
 
-        for (size_t x = 0; x < m->cols; x++)
+    int ndims = m->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < m->size; count++)
+    {
+        // Compute current offsets using stride and index counter
+        int offset = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            SET_ELEMENT_AT(m, x, y, get_random_number());
+            offset += idx[d] * m->stride[d];
+        }
+
+        double value = get_random_number();
+        m->data[offset] = value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < m->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
-Matrix *random_mat(int rows, int cols)
+Matrix *random_mat(int *shape, int ndims)
 {
-    Matrix *m = new_mat(rows, cols);
+    Matrix *m = new_mat(shape, ndims);
     random_fill_mat(m);
     return m;
 }
