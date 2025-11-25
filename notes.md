@@ -17,8 +17,9 @@
 -----------
 
 * 2d-cross-correlation product (2d conv)
+* implement it in matrix.c
+* loop over input image to do convolution in nn.c
 * (2, 10, 10), w=(5, 2, 3, 3) -> (5, 10, 10)
-* 
 
 
 
