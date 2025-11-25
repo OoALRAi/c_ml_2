@@ -1,14 +1,15 @@
 #include "matrix.h"
 int main(void)
 {
+    int shape[] = {3, 10, 10};
+    Matrix *img = new_mat(shape, 3);
+    stepwise_fill_mat(0, 1, img);
+    printf("input image: \n");
+    print_mat(img);
 
-    int shape[3] = {4, 4, 4};
-    Matrix *m = new_mat(shape, 3);
-    stepwise_fill_mat(10, 2, m);
-    int slice_range[6] = {1, 3, 1, 3, 1, 3};
-    Matrix *view = slice_mat(m, slice_range, 6);
-    print_mat(m);
-    print_mat(view);
+    int slice_range[] = {0, 3, 0, 3, 0, 3};
+    Matrix *img_slice = slice_mat(img, slice_range, 3 * 2);
+    print_mat(img_slice);
 
     return 0;
 }

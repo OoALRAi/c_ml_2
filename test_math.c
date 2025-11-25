@@ -7,7 +7,7 @@
 void test_addition()
 {
     // simple addition
-    int shape1[2] = {2, 2};
+    int shape1[] = {2, 2};
     Matrix *m1 = new_mat(shape1, 2);
     fill_mat_with(3, m1);
     Matrix *m2 = new_mat(shape1, 2);
@@ -22,8 +22,8 @@ void test_addition()
     free_mat(gt_r);
 
     // add different shapes
-    int shape2[3] = {2, 2, 3};
-    int shape3[2] = {2, 3};
+    int shape2[] = {2, 2, 3};
+    int shape3[] = {2, 3};
     m1 = new_mat(shape2, 3);
     stepwise_fill_mat(2, 3, m1);
     m2 = new_mat(shape3, 2);
@@ -33,7 +33,7 @@ void test_addition()
 void test_subtraction()
 {
     // simple sub
-    int shape1[2] = {2, 2};
+    int shape1[] = {2, 2};
     Matrix *m1 = new_mat(shape1, 2);
     fill_mat_with(9, m1);
     Matrix *m2 = new_mat(shape1, 2);
@@ -48,8 +48,8 @@ void test_subtraction()
     free_mat(gt_r);
 
     // sub different shapes
-    int shape2[3] = {2, 2, 3};
-    int shape3[2] = {2, 3};
+    int shape2[] = {2, 2, 3};
+    int shape3[] = {2, 3};
     m1 = new_mat(shape2, 3);
     stepwise_fill_mat(2, 3, m1);
     m2 = new_mat(shape3, 2);
@@ -58,7 +58,7 @@ void test_subtraction()
 }
 void test_dot()
 {
-    int shape1[1] = {4};
+    int shape1[] = {4};
     Matrix *m1 = new_mat(shape1, 1);
     fill_mat_with(1, m1);
 
@@ -70,6 +70,17 @@ void test_dot()
     assert(r == 2 * 4);
 }
 void test_mat_mul() {}
+void test_conv_mul_mat()
+{
+    int shape[] = {3,     // 3 channels image
+                   5, 5}; // height x wdith = 4 x 4 image and zero-padding of 1
+
+    int kernel_shape[] = {3,     // channels
+                          3, 3}; // 3 x 3 kernel filter
+
+    Matrix *image = new_mat(shape, 3);
+    Matrix *kernel = new_mat(kernel_shape, 3);
+}
 
 int main(void)
 {
@@ -77,5 +88,6 @@ int main(void)
     // test_subtraction();
     test_dot();
     test_mat_mul();
+    test_conv_mul_mat();
     return 0;
 }

@@ -20,9 +20,8 @@ Matrix *new_mat(int *shape, int ndims)
     }
     m->size = size;
     m->data = calloc(m->size, sizeof(double));
-    if (!m->data)
+    if (m->data == NULL)
     {
-        free(m->data);
         free(m);
         return NULL;
     }
@@ -49,6 +48,7 @@ Matrix *new_view(int *shape, int ndims, int *stride)
     m->ndims = ndims;
     m->shape = shape;
     m->stride = stride;
+
     m->owner = 0;
     m->data = NULL;
     return m;
@@ -143,7 +143,10 @@ int equals(Matrix *m1, Matrix *m2)
         double v1 = m1->data[offset_m1];
         double v2 = m2->data[offset_m2];
         if (v1 != v2)
+        {
+            free(idx);
             return 0;
+        }
 
         // compute next index
         for (int d = ndims - 1; d >= 0; d--)
@@ -227,12 +230,12 @@ int check_shapes_for_mul_mat(Matrix *m1, Matrix *m2, Matrix *result)
     }
 
     // only 2D
-    if (m1->ndims != 2 || m2->ndims != 2 || result->ndims == 2)
+    if (m1->ndims != 2 || m2->ndims != 2 || result->ndims != 2)
     {
         return 0;
     }
     // === CHECK EQUAL INNER DIMS
-    if (m1->shape[1] == m2->shape[0])
+    if (m1->shape[1] != m2->shape[0])
     {
         return 0;
     }
@@ -506,7 +509,7 @@ void transpose_mat(Matrix *m, int dim1, int dim2)
     // swap stride
     temp_value = m->stride[dim1];
     m->stride[dim1] = m->stride[dim2];
-    m->stride[dim2] = m->stride[temp_value];
+    m->stride[dim2] = temp_value;
 }
 
 void scale_mat_inplace(Matrix *m, double scaler)
@@ -531,7 +534,6 @@ void scale_mat_inplace(Matrix *m, double scaler)
         {
             offset_m += idx[d] * m->stride[d];
         }
-        // subtract values
         double m_value = m->data[offset_m];
         m->data[offset_m] = m_value * scaler;
 
@@ -551,17 +553,10 @@ void scale_mat_inplace(Matrix *m, double scaler)
 double dot_mat(Matrix *a, Matrix *b)
 {
     // === ERROR CHECK ===
-    int eq = check_shapes_elementweise_op(a, b);
-    if (eq == 0)
-    {
-        fprintf(stderr, "error in function [%s]\n", __FUNCTION__);
-        exit(-1);
-    }
-    if (a->ndims != 1 || b->ndims != 1)
-    {
-        fprintf(stderr, "[%s] dot product is only applicable for 1D matrices\n", __FUNCTION__);
-        exit(-1);
-    }
+    assert(a != NULL);
+    assert(b != NULL);
+    assert(a->ndims == 1);
+    assert(b->ndims == 1);
     // === ERROR CHECK ===
 
     // === APPLY OPERATION ===
@@ -609,6 +604,7 @@ Matrix *slice_mat(Matrix *m, int *slice_range, int slice_range_size)
         fprintf(stderr, "[%s] slice range size != ndims * 2\n", __FUNCTION__);
         exit(-1);
     }
+    // TODO: check if slice_range is out of bounds!
     // === RANGE TO SHAPE
     int *slice_shape = calloc(m->ndims, sizeof(int));
     for (int dim = 0; dim < m->ndims; dim++)
@@ -634,6 +630,14 @@ Matrix *slice_mat(Matrix *m, int *slice_range, int slice_range_size)
     {
         offset += slice_range[i * 2] * m->stride[i];
     }
+
+    int size = 1;
+    for (int i = 0; i < m->ndims; i++)
+    {
+        size *= sliced->shape[i];
+    }
+
+    sliced->size = size;
 
     sliced->data = m->data + (offset);
 
@@ -786,7 +790,7 @@ int argmax(Matrix *m)
         fprintf(stderr, "[%s] matrix is null\n", __FUNCTION__);
         exit(-1);
     }
-    if (m->ndims != 1 || m->ndims != 2)
+    if (m->ndims != 1 && m->ndims != 2)
     {
         fprintf(stderr, "[%s] argmax is only for 1D and 2D with first dim = 1 matrices applicable\n", __FUNCTION__);
         exit(-1);

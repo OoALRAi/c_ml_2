@@ -1,28 +1,16 @@
-CC=clang
-FLAGS=-Wall
+CC = clang
+CFLAGS = -Wno-implicit-function-declaration -std=c11
+LDLIBS = -lm
 
-all: main.o matrix.o nn.o mnist.o statistic_utils.o
-	$(CC) $(FLAGS) statistic_utils.o nn.o mnist.o matrix.o main.o -o main -lm
-test_math: test_math.o matrix.o
-	$(CC) $(FLAGS) test_math.o matrix.o -o test_math -lm
-
-test_conv: nn.o test_conv.o matrix.o
-	$(CC) $(FLAGS) test_conv.o nn.o matrix.o -o test_conv -lm
-
-test_slice: test_slice.o matrix.o
-	$(CC) $(FLAGS) test_slice.o matrix.o -o test_slice -lm
+TEST_SLICE_TARGET = test_slice
+TEST_SLICE_SRC = test_slice.c matrix.c
+TEST_SLICE_OBJ = $(TEST_SLICE_SRC:.c=.o)
 
 
-test_mem_leak: test_mem_leak.o nn.o matrix.o mnist.o
-	$(CC) $(FLAGS) test_mem_leak.o nn.o matrix.o mnist.o -o test_mem_leak -lm
+$(TEST_SLICE_TARGET) : $(TEST_SLICE_OBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS) 
 
-test_tanh: test_tanh.o nn.o matrix.o
-	$(CC) $(FLAGS) test_tanh.o nn.o matrix.o -o test_tanh -lm
-
-test_mnist: test_mnist.o mnist.o matrix.o
-	$(CC) $(FLAGS) test_mnist.o matrix.o mnist.o -o test_mnist -lm
-
-test_statistic_utils: test_statistic_utils.o matrix.o statistic_utils.o
-	$(CC) $(FLAGS) test_statistic_utils.o statistic_utils.o matrix.o -o test_statistic_utils -lm
+.PHONY: clean
 clean:
-	rm *.o main main2 main_str test_mem_leak test_statistic_utils test_conv test_math test_slice
+	@echo cleaning files..
+	rm *.o $(TEST_SLICE_TARGET)

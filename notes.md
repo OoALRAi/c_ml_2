@@ -13,11 +13,15 @@
 * free memory to prevent memory leaks in forward and backward. (done)
 * add more activation functions (done enough)
 * compute statistics to present in github page (done)
-* precision and recall for each class
+* precision and recall for each class (done)
 -----------
+
+* 2d-cross-correlation product (2d conv)
+* (2, 10, 10), w=(5, 2, 3, 3) -> (5, 10, 10)
+* 
+
 
 
 ### Very important Observation:
 * deeper netowrk needs smaller learning rate in order to converge correctly!
-
 * 3 layers to solve mnist classification problem with no memory leaks consumes only 3.6MB
