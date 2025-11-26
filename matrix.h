@@ -47,7 +47,18 @@ void scale_mat_inplace(Matrix *m, double scaler);
 
 double max(Matrix *m);
 int argmax(Matrix *m);
+void squeeze_first_dim(Matrix *m);
 
+/**
+ * Compute dot product of input matrices.
+ * For 1D input matrices compute dot product directly.
+ * For 2D input matrices compute the inner product of them
+ * which is like sum of element-wise product of values of
+ * the two input matrices.
+ * @param a: Matrix pointer
+ * @param b: Matrix pointer
+ * @return double
+ */
 double dot_mat(Matrix *a, Matrix *b);
 Matrix *slice_mat(Matrix *m, int *slice_range, int slice_range_size);
 // ==== no memory allocation in these operations ====

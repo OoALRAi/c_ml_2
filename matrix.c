@@ -484,6 +484,25 @@ void e_pow_mat_to(Matrix *m, Matrix *result, double pow_value)
     // === APPLY OPERATION ===
 }
 
+void squeeze_first_dim(Matrix *m)
+{
+    assert(m != NULL);
+    assert(m->ndims > 1);
+    assert(m->shape[0] == 1);
+    int *new_stride = malloc(m->ndims);
+    int *new_shape = malloc(m->ndims);
+    for (int dim = 1; dim < m->ndims; ++dim)
+    {
+        new_stride[dim - 1] = m->stride[dim];
+        new_shape[dim - 1] = m->shape[dim];
+    }
+    free(m->shape);
+    m->shape = new_shape;
+    free(m->stride);
+    m->stride = new_stride;
+    m->ndims = m->ndims - 1;
+}
+
 void transpose_mat(Matrix *m, int dim1, int dim2)
 {
     if (m == NULL)
@@ -555,8 +574,13 @@ double dot_mat(Matrix *a, Matrix *b)
     // === ERROR CHECK ===
     assert(a != NULL);
     assert(b != NULL);
-    assert(a->ndims == 1);
-    assert(b->ndims == 1);
+    assert(a->ndims == b->ndims);
+    assert(a->ndims >= 1 && a->ndims <= 2);
+    assert(b->ndims >= 1 && b->ndims <= 2);
+    for (int dim = 0; dim < a->ndims; ++dim)
+    {
+        assert(a->shape[dim] == b->shape[dim]);
+    }
     // === ERROR CHECK ===
 
     // === APPLY OPERATION ===

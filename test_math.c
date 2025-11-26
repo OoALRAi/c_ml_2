@@ -58,16 +58,53 @@ void test_subtraction()
 }
 void test_dot()
 {
+    // === 1D dot product ===
     int shape1[] = {4};
-    Matrix *m1 = new_mat(shape1, 1);
-    fill_mat_with(1, m1);
+    int shape2[] = {4};
+    Matrix *a = new_mat(shape1, 1);
+    Matrix *b = new_mat(shape2, 1);
+    fill_mat_with(1, a);
+    fill_mat_with(7, b);
+    double result = dot_mat(a, b);
+    assert(result == 28);
+    printf("test1: succeed\n");
+    free_mat(a);
+    free_mat(b);
+    // === 1D dot product ===
 
-    Matrix *m2 = new_mat(shape1, 1);
-    fill_mat_with(2, m2);
+    // === 2D dot product ===
+    int shape3[] = {2, 3};
+    int shape4[] = {2, 3};
+    a = new_mat(shape3, 2);
+    b = new_mat(shape4, 2);
+    fill_mat_with(2, a);
+    fill_mat_with(3, b);
+    result = dot_mat(a, b);
+    assert(result == 2 * 3 * 6);
+    printf("test2: succeed\n");
+    free_mat(a);
+    free_mat(b);
 
-    double r = dot_mat(m1, m2);
-    printf("dot result: %.2f\n", r);
-    assert(r == 2 * 4);
+    // ===
+
+    int shape5[] = {3, 10, 10};
+    a = new_mat(shape5, 3);
+    stepwise_fill_mat(1, 1, a);
+
+    int shape6[] = {3, 3};
+    b = new_mat(shape6, 2);
+    fill_mat_with(3, b);
+
+    int slice_range[] = {0, 1, 1, 4, 2, 5};
+    Matrix *image_slice = slice_mat(a, slice_range, 6);
+    squeeze_first_dim(image_slice);
+    result = dot_mat(b, image_slice);
+    assert(result == 648);
+    printf("test3: succeed\n");
+    free_mat(a);
+    free_mat(b);
+    free_mat(image_slice);
+    // === 2D dot product ===
 }
 void test_mat_mul() {}
 void test_conv_mul_mat()
@@ -86,6 +123,7 @@ int main(void)
 {
     // test_addition();
     // test_subtraction();
+    printf("[TEST DOT PRODUCT]\n");
     test_dot();
     test_mat_mul();
     test_conv_mul_mat();
