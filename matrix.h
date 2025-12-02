@@ -4,20 +4,19 @@
 #define GET_ELEMENT_AT(m, x, y) (m->data[y * (m->stride) + x])
 #define SET_ELEMENT_AT(m, x, y, v) (m->data[y * (m->stride) + x] = v)
 
-typedef struct Matrix
-{
-    int owner;
-    int ndims;  // size of shape list
-    int *shape; // list of dimensions sizes
-    // for e.g. 2x3 matrix has the shape [2, 3]
-    // an 28x28 rgb image with has 3 channels,
-    // thus the shape is [3, 28, 28]
-    // i.e. 3 channels and each of size 28 x 28
+typedef struct Matrix {
+  int owner;
+  int ndims;  // size of shape list
+  int *shape; // list of dimensions sizes
+  // for e.g. 2x3 matrix has the shape [2, 3]
+  // an 28x28 rgb image with has 3 channels,
+  // thus the shape is [3, 28, 28]
+  // i.e. 3 channels and each of size 28 x 28
 
-    int *stride; // size of strides = ndims - 1
+  int *stride; // size of strides = ndims - 1
 
-    double *data;
-    int size; // size of data array
+  double *data;
+  int size; // size of data array
 } Matrix;
 
 Matrix *new_mat(int *shape, int ndims);
@@ -37,6 +36,7 @@ int check_shapes_for_mul_mat(Matrix *m1, Matrix *m2, Matrix *result);
 // ==== no memory allocation in these operations ====
 void add_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void sub_mat_to(Matrix *a, Matrix *b, Matrix *result);
+void mul_mat_to(Matrix *a, Matrix *b, Matrix *result);
 
 void e_div_mat_to(Matrix *a, Matrix *b, Matrix *result);
 void div_mat_by_value_to(Matrix *m, double value, Matrix *result);
@@ -66,8 +66,9 @@ Matrix *slice_mat(Matrix *m, int *slice_range, int slice_range_size);
 // ==== memory allocation ====
 Matrix *add_mat(Matrix *a, Matrix *b);
 Matrix *sub_mat(Matrix *a, Matrix *b);
+Matrix *mul_mat(Matrix *a, Matrix *b);
 Matrix *div_mat_by_value(Matrix *m, double value);
-void transpose_mat(Matrix *m, int dim1, int dim2);
+Matrix *transpose_mat(Matrix *m, int dim1, int dim2);
 // ==== memory allocation ====
 
 // help functions to fill matrix

@@ -3,66 +3,146 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <assert.h>
 
 void relu(Matrix *input, Matrix *result)
 {
-    if (input == NULL)
+    assert(input != NULL);
+    assert(result != NULL);
+    int ndims = input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < input->size; count++)
     {
-        fprintf(stderr, "input matrix is null\n");
-        exit(-1);
-    }
-    for (size_t y = 0; y < input->rows; y++)
-    {
-        for (size_t x = 0; x < input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(input, x, y);
-            double act_value = value > 0 ? value : 0;
-            SET_ELEMENT_AT(result, x, y, act_value);
+            offset_a += idx[d] * input->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+
+        double value = input->data[offset_a];
+        double act_value = value > 0 ? value : 0;
+        result->data[offset_c] = act_value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 void grad_relu(Matrix *relu_input, Matrix *next_grad, Matrix *result)
 {
-    for (size_t y = 0; y < relu_input->rows; y++)
+    assert(relu_input != NULL);
+    assert(result != NULL);
+    assert(next_grad != NULL);
+
+    int ndims = relu_input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < relu_input->size; count++)
     {
-        for (size_t x = 0; x < relu_input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_c = 0, offset_ng = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(relu_input, x, y);
-            SET_ELEMENT_AT(result, x, y, value > 0 ? GET_ELEMENT_AT(next_grad, x, y) : 0);
+            offset_a += idx[d] * relu_input->stride[d];
+            offset_c += idx[d] * result->stride[d];
+            offset_ng += idx[d] * next_grad->stride[d];
+        }
+
+        double value = relu_input->data[offset_a];
+        double ng_value = next_grad->data[offset_ng];
+        double grad_value = value > 0 ? ng_value : 0;
+        result->data[offset_c] = grad_value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < relu_input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 void leaky_relu(Matrix *input, Matrix *result)
 {
-    if (input == NULL)
+    assert(input != NULL);
+    assert(result != NULL);
+    int ndims = input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < input->size; count++)
     {
-        fprintf(stderr, "input matrix is null\n");
-        exit(-1);
-    }
-    for (size_t y = 0; y < input->rows; y++)
-    {
-        for (size_t x = 0; x < input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(input, x, y);
-            double act_value = value > 0 ? value : 0.1 * value;
-            SET_ELEMENT_AT(result, x, y, act_value);
+            offset_a += idx[d] * input->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+
+        double value = input->data[offset_a];
+        double act_value = value > 0 ? value : 0.1 * value;
+        result->data[offset_c] = act_value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
+
 void grad_leaky_relu(Matrix *input, Matrix *next_grad, Matrix *result)
 {
-    for (size_t y = 0; y < input->rows; y++)
+    assert(input != NULL);
+    assert(result != NULL);
+    assert(next_grad != NULL);
+
+    int ndims = input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < input->size; count++)
     {
-        for (size_t x = 0; x < input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_c = 0, offset_ng = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(input, x, y);
-            double next_grad_value = GET_ELEMENT_AT(next_grad, x, y);
-            double grad_value = value > 0 ? next_grad_value : 0.1 * next_grad_value;
-            SET_ELEMENT_AT(result, x, y, grad_value);
+            offset_a += idx[d] * input->stride[d];
+            offset_c += idx[d] * result->stride[d];
+            offset_ng += idx[d] * next_grad->stride[d];
+        }
+
+        double value = input->data[offset_a];
+        double ng_value = next_grad->data[offset_ng];
+        double grad_value = value > 0 ? ng_value : 0.1 * ng_value;
+        result->data[offset_c] = grad_value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 double sigmoid_function(double value)
@@ -72,86 +152,134 @@ double sigmoid_function(double value)
 
 void sigmoid(Matrix *input, Matrix *result)
 {
-    for (size_t y = 0; y < input->rows; y++)
+    assert(input != NULL);
+    assert(result != NULL);
+    int ndims = input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < input->size; count++)
     {
-        for (size_t x = 0; x < input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_c = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(input, x, y);
-            SET_ELEMENT_AT(result, x, y, sigmoid_function(value));
+            offset_a += idx[d] * input->stride[d];
+            offset_c += idx[d] * result->stride[d];
+        }
+
+        double value = input->data[offset_a];
+        double act_value = sigmoid_function(value);
+        result->data[offset_c] = act_value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
 }
 
 void grad_sigmoid(Matrix *sigmoid_input, Matrix *next_grad, Matrix *result)
 {
-    for (size_t y = 0; y < sigmoid_input->rows; y++)
+
+    assert(sigmoid_input != NULL);
+    assert(result != NULL);
+    assert(next_grad != NULL);
+
+    int ndims = sigmoid_input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < sigmoid_input->size; count++)
     {
-        for (size_t x = 0; x < sigmoid_input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_c = 0, offset_ng = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(sigmoid_input, x, y);
-            double next_grad_value = GET_ELEMENT_AT(next_grad, x, y);
-            double sig_value = sigmoid_function(value);
-            double sig_grad_value = sig_value * (1 - sig_value);
-            sig_grad_value *= next_grad_value;
-            SET_ELEMENT_AT(result, x, y, sig_grad_value);
+            offset_a += idx[d] * sigmoid_input->stride[d];
+            offset_c += idx[d] * result->stride[d];
+            offset_ng += idx[d] * next_grad->stride[d];
+        }
+
+        double value = sigmoid_input->data[offset_a];
+        double ng_value = next_grad->data[offset_ng];
+        double sig_value = sigmoid_function(value);
+        double grad_value = sig_value * (1 - sig_value);
+        grad_value *= ng_value;
+
+        result->data[offset_c] = grad_value;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < sigmoid_input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
-}
-
-double tanh_func(double value)
-{
-    return tanh(value);
-}
-
-void tanh_act(Matrix *input, Matrix *result)
-{
-    for (size_t y = 0; y < input->rows; y++)
-    {
-        for (size_t x = 0; x < input->cols; x++)
-        {
-            double value = GET_ELEMENT_AT(input, x, y);
-            SET_ELEMENT_AT(result, x, y, tanh_func(value));
-        }
-    }
-}
-
-void grad_tanh(Matrix *tanh_input, Matrix *next_grad, Matrix *result)
-{
-    for (size_t y = 0; y < tanh_input->rows; y++)
-    {
-        for (size_t x = 0; x < tanh_input->cols; x++)
-        {
-            double value = GET_ELEMENT_AT(tanh_input, x, y);
-            value = 1 - powf(tanh_func(value), 2.0);
-            value *= GET_ELEMENT_AT(next_grad, x, y);
-            SET_ELEMENT_AT(result, x, y, value);
-        }
-    }
+    free(idx);
 }
 
 void softmax(Matrix *input, Matrix *result)
 {
     double max_value = max(input);
     double sum_exp = 0;
-    for (size_t y = 0; y < input->rows; y++)
-    {
-        for (size_t x = 0; x < input->cols; x++)
-        {
-            double value = GET_ELEMENT_AT(input, x, y) - max_value;
-            double exp_value = exp(value);
-            sum_exp += exp_value;
-        }
-    }
+    // ===
+    assert(input != NULL);
+    assert(result != NULL);
+    int ndims = input->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
 
-    for (size_t y = 0; y < input->rows; y++)
+    for (int count = 0; count < input->size; count++)
     {
-        for (size_t x = 0; x < input->cols; x++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            double value = GET_ELEMENT_AT(input, x, y) - max_value;
-            double exp_value = exp(value);
-            SET_ELEMENT_AT(result, x, y, exp_value / sum_exp);
+            offset_a += idx[d] * input->stride[d];
+        }
+        double value = input->data[offset_a] - max_value;
+        sum_exp += exp(value);
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < input->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
+    free(idx);
+
+    idx = calloc(ndims, sizeof(int)); // current indices
+    for (int count = 0; count < input->size; count++)
+    {
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_r = 0;
+        for (int d = 0; d < ndims; d++)
+        {
+            offset_a += idx[d] * input->stride[d];
+            offset_r += idx[d] * result->stride[d];
+        }
+        double value = input->data[offset_a] - max_value;
+        double exp_value = exp(value);
+        result->data[offset_r] = exp_value / sum_exp;
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < input->shape[d])
+                break;
+            idx[d] = 0;
+        }
+    }
+    free(idx);
 }
 
 void grad_softmax(Matrix *softmax_input, Matrix *ground_truth, Matrix *result)
@@ -194,17 +322,35 @@ Matrix *cross_entropy_loss(Matrix *y, Matrix *y_hat)
     // if true label is 2 then it should be represented as:
     // [0,0,1,0]
     double sum = 0;
-    for (int yi = 0; yi < y->rows; yi++)
+    int result_shape[] = {1};
+    Matrix *result = new_mat(result_shape, 1);
+    int ndims = y->ndims;
+    int *idx = calloc(ndims, sizeof(int)); // current indices
+
+    for (int count = 0; count < y->size; count++)
     {
-        for (int xi = 0; xi < y->cols; xi++)
+        // Compute current offsets using stride and index counter
+        int offset_a = 0, offset_b = 0;
+        for (int d = 0; d < ndims; d++)
         {
-            // y_i * log (y_i_hat)
-            sum -= GET_ELEMENT_AT(y, xi, yi) * log(GET_ELEMENT_AT(y_hat, xi, yi));
+            offset_a += idx[d] * y->stride[d];
+            offset_b += idx[d] * y_hat->stride[d];
+        }
+
+        sum -= y->data[offset_a] * log(y_hat->data[offset_b]);
+
+        // compute next index
+        for (int d = ndims - 1; d >= 0; d--)
+        {
+            idx[d]++;
+            if (idx[d] < y->shape[d])
+                break;
+            idx[d] = 0;
         }
     }
-    Matrix *r = new_mat(1, 1);
-    SET_ELEMENT_AT(r, 0, 0, sum);
-    return r;
+    result->data[0] = sum;
+    free(idx);
+    return result;
 }
 
 Matrix *grad_cross_entropy_loss(Matrix *y, Matrix *y_hat)
@@ -227,12 +373,23 @@ Dense *create_dense(int in, int out, void (*activation)(Matrix *, Matrix *), voi
     dense->in_dim = in;
     dense->out_dim = out;
 
-    dense->input = new_mat(1, in);
-    dense->weights = new_mat(in, out);
-    dense->bias = new_mat(1, out);
-    dense->out_pred_act = new_mat(1, out);
-    dense->out_post_act = new_mat(1, out);
-    dense->dz = new_mat(1, out);
+    int shape_input[2] = {1, in};
+    dense->input = new_mat(shape_input, 2);
+
+    int shape_weight[2] = {in, out};
+    dense->weights = new_mat(shape_weight, 2);
+
+    int shape_bias[2] = {1, out};
+    dense->bias = new_mat(shape_bias, 2);
+
+    int shape_out_pred_act[2] = {1, out};
+    dense->out_pred_act = new_mat(shape_out_pred_act, 2);
+
+    int shape_out_post_act[2] = {1, out};
+    dense->out_post_act = new_mat(shape_out_post_act, 2);
+
+    int shape_dz[2] = {1, out};
+    dense->dz = new_mat(shape_dz, 2);
 
     random_fill_mat(dense->weights);
     random_fill_mat(dense->bias);
@@ -292,10 +449,6 @@ Conv2d *create_conv2d(int input_channels, int output_channels, int kernel_size, 
     conv->padding = padding;
 
     conv->kernel_weights = malloc(input_channels * output_channels * sizeof(Matrix));
-    for (int i = 0; i < input_channels * output_channels; i++)
-    {
-        conv->kernel_weights[i] = new_mat(kernel_size, kernel_size);
-    }
     return conv;
 }
 
@@ -355,29 +508,29 @@ void free_loss(Loss *l)
 
 void print_dense(Dense *d)
 {
-    printf("dense layer: %d\n", d->id);
-    printf("input dim: %d, out_post_act dim: %d\n", d->in_dim, d->out_dim);
-    if (d->input != NULL)
-    {
-        printf("input tensor dim: (%dx%d)\n", d->input->rows, d->input->cols);
-    }
+    // printf("dense layer: %d\n", d->id);
+    // printf("input dim: %d, out_post_act dim: %d\n", d->in_dim, d->out_dim);
+    // if (d->input != NULL)
+    // {
+    //     printf("input tensor dim: (%dx%d)\n", d->input->rows, d->input->cols);
+    // }
 
-    printf("bias dim: (%dx%d)\n", d->bias->rows, d->bias->cols);
+    // printf("bias dim: (%dx%d)\n", d->bias->rows, d->bias->cols);
 
-    if (d->out_pred_act != NULL)
-    {
-        printf("out_pred_act tensor dim: (%dx%d)\n", d->out_pred_act->rows, d->out_pred_act->cols);
-    }
-    if (d->out_post_act != NULL)
-    {
-        printf("out_post_act tensor dim: (%dx%d)\n", d->out_post_act->rows, d->out_post_act->cols);
-    }
+    // if (d->out_pred_act != NULL)
+    // {
+    //     printf("out_pred_act tensor dim: (%dx%d)\n", d->out_pred_act->rows, d->out_pred_act->cols);
+    // }
+    // if (d->out_post_act != NULL)
+    // {
+    //     printf("out_post_act tensor dim: (%dx%d)\n", d->out_post_act->rows, d->out_post_act->cols);
+    // }
 }
 
 Matrix *forward(Dense *d, Matrix *input)
 {
     copy_mat(input, d->input);
-    dot_to(input, d->weights, d->out_pred_act);
+    mul_mat_to(input, d->weights, d->out_pred_act);
     add_mat_to(d->out_pred_act, d->bias, d->out_pred_act);
     d->activation(d->out_pred_act, d->out_post_act);
     return d->out_post_act;
@@ -388,16 +541,16 @@ void backward(Dense *d, Matrix *next_grad, double lr)
     d->grad_activation(d->out_pred_act, next_grad, d->dz);
 
     // y = xw+b
-    Matrix *dydw = transpose_mat(d->input);
+    Matrix *dydw = transpose_mat(d->input, 0, 1);
     if (d->dw == NULL)
     {
-        Matrix *dw = dot(dydw, d->dz);
+        Matrix *dw = mul_mat(dydw, d->dz);
         scale_mat_to(dw, lr, dw);
         d->dw = dw;
     }
     else
     {
-        dot_to(dydw, d->dz, d->dw);
+        mul_mat_to(dydw, d->dz, d->dw);
         scale_mat_to(d->dw, lr, d->dw);
     }
     free_mat(dydw);
@@ -405,7 +558,7 @@ void backward(Dense *d, Matrix *next_grad, double lr)
 
     if (d->db == NULL)
     {
-        d->db = new_mat(d->bias->rows, d->bias->cols);
+        d->db = new_mat(d->bias->shape, d->bias->ndims);
         copy_mat(d->dz, d->db);
         scale_mat_to(d->db, lr, d->db);
         sub_mat_to(d->bias, d->db, d->bias);
@@ -417,8 +570,8 @@ void backward(Dense *d, Matrix *next_grad, double lr)
         sub_mat_to(d->bias, d->db, d->bias);
     }
 
-    Matrix *dydx = transpose_mat(d->weights);
-    Matrix *dx = dot(d->dz, dydx);
+    Matrix *dydx = transpose_mat(d->weights, 0, 1);
+    Matrix *dx = mul_mat(d->dz, dydx);
     if (d->dx == NULL)
     {
         d->dx = dx;

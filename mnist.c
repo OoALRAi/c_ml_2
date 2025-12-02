@@ -39,17 +39,17 @@ char *read_next_line(FILE *fp)
 
 void one_hot_label(int label, Matrix *result)
 {
-    for (int i = 0; i < result->cols; i++)
+    for (int i = 0; i < result->shape[1]; i++)
     {
-        SET_ELEMENT_AT(result, i, 0, i == label);
+        result->data[i] = i == label;
     }
 }
 int label_from_one_hot(Matrix *one_hot_label)
 {
     int label = -1;
-    for (int i = 0; i < one_hot_label->cols; i++)
+    for (int i = 0; i < one_hot_label->shape[1]; i++)
     {
-        if (GET_ELEMENT_AT(one_hot_label, i, 0) == 1)
+        if (one_hot_label->data[i] == 1)
         {
             label = i;
         }
@@ -84,7 +84,8 @@ void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
         double value = atof(current_char);
         value /= 256;
 
-        SET_ELEMENT_AT(data, i, 0, value);
+        data->data[i] = value;
+
         current_char = skip_value(current_char);
         if (current_char == NULL)
             break;
@@ -94,8 +95,10 @@ void parse_line_to_mat(char *line_data, Matrix *data, Matrix *label)
 Mnist_Datapoint *create_datapoint()
 {
     Mnist_Datapoint *dp = malloc(sizeof(Mnist_Datapoint));
-    dp->label = new_mat(1, 10); // one-hot
-    dp->data = new_mat(1, 28 * 28);
+    int shape_label[] = {1, 10};
+    dp->label = new_mat(shape_label, 2); // one-hot
+    int shape_image[] = {1, 28 * 28};
+    dp->data = new_mat(shape_image, 2);
     return dp;
 }
 

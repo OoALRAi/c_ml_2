@@ -56,6 +56,17 @@ void test_subtraction()
     stepwise_fill_mat(1, 1, m2);
     r = sub_mat(m1, m2);
 }
+
+void test_transpose()
+{
+    int shape[] = {1, 5};
+    Matrix *m = new_mat(shape, 2);
+    stepwise_fill_mat(1, 1, m);
+    Matrix *r = transpose_mat(m, 0, 1);
+    print_mat(m);
+    print_mat(r);
+}
+
 void test_dot()
 {
     // === 1D dot product ===
@@ -106,7 +117,18 @@ void test_dot()
     free_mat(image_slice);
     // === 2D dot product ===
 }
-void test_mat_mul() {}
+void test_mat_mul()
+{
+    int shape1[] = {1, 3};
+    int shape2[] = {3, 2};
+    Matrix *m1 = new_mat(shape1, 2);
+    Matrix *m2 = new_mat(shape2, 2);
+    fill_mat_with(1, m1);
+    fill_mat_with(2, m2);
+    Matrix *r = mul_mat(m1, m2);
+    print_mat(r);
+}
+
 void test_conv_mul_mat()
 {
     int shape[] = {3,     // 3 channels image
@@ -123,9 +145,10 @@ int main(void)
 {
     // test_addition();
     // test_subtraction();
-    printf("[TEST DOT PRODUCT]\n");
-    test_dot();
-    test_mat_mul();
-    test_conv_mul_mat();
+    // printf("[TEST DOT PRODUCT]\n");
+    // test_dot();
+    test_transpose();
+    // test_mat_mul();
+    // test_conv_mul_mat();
     return 0;
 }

@@ -11,7 +11,11 @@ Matrix *new_mat(int *shape, int ndims)
 
     m->owner = 1;
     m->ndims = ndims;
-    m->shape = shape;
+    m->shape = malloc(ndims * sizeof(int));
+    for (int dim = 0; dim < ndims; ++dim)
+    {
+        m->shape[dim] = shape[dim];
+    }
 
     int size = 1;
     for (int i = 0; i < ndims; i++)
@@ -222,27 +226,9 @@ int check_shapes_for_mul_mat(Matrix *m1, Matrix *m2, Matrix *result)
     check if sizes of given matrices are appropriate for dot product;
     return: 1 if appropriate, else 0
 
-    dot product is only applicable for ndim = 2 matrices like 3x3 matrices
+    matrix multiplication is only applicable for ndim = 2 matrices like 3x3 matrices
     */
-    if (m1 == NULL || m2 == NULL || result == NULL)
-    {
-        return 0;
-    }
 
-    // only 2D
-    if (m1->ndims != 2 || m2->ndims != 2 || result->ndims != 2)
-    {
-        return 0;
-    }
-    // === CHECK EQUAL INNER DIMS
-    if (m1->shape[1] != m2->shape[0])
-    {
-        return 0;
-    }
-    if (result->shape[0] != m1->shape[0] || result->shape[1] != m2->shape[1])
-    {
-        return 0;
-    }
     return 1;
 }
 
@@ -334,17 +320,20 @@ void sub_mat_to(Matrix *a, Matrix *b, Matrix *result)
 void mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
 {
     // === CHECK ERROR ===
-    int check_results = check_shapes_for_mul_mat(a, b, result);
-    if (check_results == 0)
-    {
-        fprintf(stderr, "[%s] dot product not possible\n", __FUNCTION__);
-        exit(-1);
-    }
+    assert(a != NULL);
+    assert(b != NULL);
+    assert(result != NULL);
+    assert(a->ndims == 2);
+    assert(b->ndims == 2);
+    assert(result->ndims == 2);
+
+    assert(a->shape[1] == b->shape[0]);
+    assert(result->shape[0] == a->shape[0] && result->shape[1] == b->shape[1]);
     // === CHECK ERROR ===
 
     for (int y = 0; y < a->shape[0]; y++)
     {
-        for (int x = 0; x < a->shape[1]; x++)
+        for (int x = 0; x < b->shape[1]; x++)
         {
             double acc = 0;
             for (int i = 0; i < a->shape[1]; i++)
@@ -354,7 +343,8 @@ void mul_mat_to(Matrix *a, Matrix *b, Matrix *result)
                 double r_value = a_value * b_value;
                 acc += r_value;
             }
-            result->data[y * result->stride[0] + x] = acc;
+            int offset = y * result->stride[0] + x;
+            result->data[offset] = acc;
         }
     }
 }
@@ -503,32 +493,40 @@ void squeeze_first_dim(Matrix *m)
     m->ndims = m->ndims - 1;
 }
 
-void transpose_mat(Matrix *m, int dim1, int dim2)
+Matrix *transpose_mat(Matrix *m, int dim1, int dim2)
 {
-    if (m == NULL)
-    {
-        fprintf(stderr, "input matrix is null\n");
-        exit(-1);
-    }
-    if (dim1 < 0 || dim1 >= m->ndims)
-    {
-        fprintf(stderr, "[%s] dim1 = %d out of range\n", __FUNCTION__, dim1);
-        exit(-1);
-    }
-    if (dim1 < 0 || dim1 >= m->ndims)
-    {
-        fprintf(stderr, "[%s] dim2 = %d out of range\n", __FUNCTION__, dim2);
-        exit(-1);
-    }
-    // swap shape
-    int temp_value = m->shape[dim1];
-    m->shape[dim1] = m->shape[dim2];
-    m->shape[dim2] = m->shape[temp_value];
+    assert(m != NULL);
+    assert(dim1 >= 0);
+    assert(dim1 < m->ndims);
+    assert(dim2 >= 0);
+    assert(dim2 < m->ndims);
 
-    // swap stride
-    temp_value = m->stride[dim1];
-    m->stride[dim1] = m->stride[dim2];
-    m->stride[dim2] = temp_value;
+    // new view
+    int *shape_result = malloc(m->ndims * sizeof(int));
+    int *stride_result = malloc(m->ndims * sizeof(int));
+
+    for (int dim = 0; dim < m->ndims; ++dim)
+    {
+        if (dim == dim1)
+        {
+            shape_result[dim] = m->shape[dim2];
+            stride_result[dim] = m->stride[dim2];
+        }
+        else if (dim == dim2)
+        {
+            shape_result[dim] = m->shape[dim1];
+            stride_result[dim] = m->stride[dim1];
+        }
+        else
+        {
+            shape_result[dim] = m->shape[dim];
+            stride_result[dim] = m->stride[dim];
+        }
+    }
+
+    Matrix *result = new_view(shape_result, m->ndims, stride_result);
+    result->data = m->data;
+    return result;
 }
 
 void scale_mat_inplace(Matrix *m, double scaler)
@@ -679,6 +677,19 @@ Matrix *sub_mat(Matrix *a, Matrix *b)
 {
     Matrix *r = new_mat(a->shape, a->ndims);
     sub_mat_to(a, b, r);
+    return r;
+}
+
+Matrix *mul_mat(Matrix *a, Matrix *b)
+{
+    assert(a != NULL);
+    assert(b != NULL);
+    assert(a->ndims == 2);
+    assert(b->ndims == 2);
+    assert(a->shape[1] == b->shape[0]);
+    int shape_result[] = {a->shape[0], b->shape[1]};
+    Matrix *r = new_mat(shape_result, 2);
+    mul_mat_to(a, b, r);
     return r;
 }
 
@@ -867,11 +878,11 @@ void print_mat_rec(Matrix *m, int *indices, int level)
         for (int i = 0; i < m->shape[level]; ++i)
         {
             int flat_index = 0;
-            for (int j = 0; j < m->ndims; j++)
+            for (int j = 0; j < m->ndims - 1; j++)
             {
-                flat_index += m->stride[j] * indices[j];
+                flat_index += (m->stride[j] * indices[j]);
             }
-            flat_index += i;
+            flat_index += i * m->stride[level];
             printf("%.2f", m->data[flat_index]);
             if (i < m->shape[level] - 1)
                 printf(", ");
