@@ -11,7 +11,7 @@ TEST_MATH_SRC = test_math.c matrix.c
 TEST_MATH_OBJ = $(TEST_MATH_SRC:.c=.o)
 
 TARGET = main
-SRC = main.c nn.c matrix.c mnist.c# statistic_utils.c
+SRC = main.c nn.c matrix.c mnist.c statistic_utils.c
 OBJ = $(SRC:.c=.o)
 
 $(TARGET) : $(OBJ)

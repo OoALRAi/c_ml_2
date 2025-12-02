@@ -3,7 +3,7 @@
 #include "matrix.h"
 #include "nn.h"
 #include "mnist.h"
-// #include "statistic_utils.h"
+#include "statistic_utils.h"
 
 Matrix *forward_pass(Dense *network[], int num_layers, Mnist_Datapoint *dp)
 {
@@ -36,12 +36,12 @@ int train(Dense *network[], int num_layers, Loss *loss, Mnist_Datapoint *dp, dou
     backward_pass(network, num_layers, loss, lr);
     return 0;
 }
-void test(Dense *network[], int num_layers, Mnist_Datapoint *dp) //, Confusion_Matrix *confusion_mat)
+void test(Dense *network[], int num_layers, Mnist_Datapoint *dp, Confusion_Matrix *confusion_mat)
 {
     Matrix *pred = forward_pass(network, num_layers, dp);
     int pred_value = argmax(pred);
     int gt_value = argmax(dp->label);
-    // add_prediction(confusion_mat, gt_value, pred_value);
+    add_prediction(confusion_mat, gt_value, pred_value);
 }
 
 int main(void)
@@ -62,7 +62,7 @@ int main(void)
 
     Mnist_Dataset *dataset = create_mnist_from_csv("./data/mnist_test.csv", dataset_size);
     double loss_value = 0;
-    // Confusion_Matrix *confusion_mat = create_confision_matrix(num_class);
+    Confusion_Matrix *confusion_mat = create_confision_matrix(num_class);
 
     for (size_t epoch = 0; epoch < 200; epoch++)
     {
@@ -83,10 +83,10 @@ int main(void)
             Mnist_Datapoint *datapoint = get_next_datapoint(dataset);
             if (datapoint == NULL)
                 break;
-            test(network, num_layers, datapoint); //, confusion_mat);
+            test(network, num_layers, datapoint, confusion_mat);
         }
-        // print_stats(confusion_mat);
-        // end_epoch(confusion_mat);
+        print_stats(confusion_mat);
+        end_epoch(confusion_mat);
     }
     for (int i = 0; i < num_layers; i++)
     {
