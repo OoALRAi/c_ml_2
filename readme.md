@@ -1,7 +1,7 @@
 ###  Neural Network Framework in c
 very simple neural network framework in c with which users can implement feedforward NNs to solve classification and regression problems.
 
-### Tensor Implementation
+### Tensor Implementation (Strided Matrices)
 The matrix library implemented from scratch has been refactored to represent an implementation of tensors rather than simple matrices. The reason beeing that this could simplify the implementation of convolution layers where a lot of tensors are sliced and reshaped (note: that there is no implementation of reshape function yet!).
 
 ---
